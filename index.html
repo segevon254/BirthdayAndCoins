@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Probability & Stats Hub</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .hidden-tab { display: none; }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800 font-sans min-h-screen">
+
+    <div class="max-w-3xl mx-auto pt-10 px-4">
+        <h1 class="text-3xl font-bold text-center mb-8 text-blue-600">Probability & Stats Hub</h1>
+        
+        <!-- Tab Navigation -->
+        <div class="flex border-b mb-6 border-gray-300">
+            <button onclick="switchTab('coin-tab')" id="btn-coin" class="w-1/2 py-3 font-semibold text-blue-600 border-b-2 border-blue-600 bg-blue-50">Coin Flip Calculator</button>
+            <button onclick="switchTab('bday-tab')" id="btn-bday" class="w-1/2 py-3 font-semibold text-gray-500 hover:text-blue-600 transition">Birthday Simulator</button>
+        </div>
+
+        <!-- Coin Flip Calculator Tab -->
+        <div id="coin-tab" class="bg-white p-6 rounded-lg shadow-md mb-10">
+            <h2 class="text-xl font-bold mb-4">Coin Flip Odds Calculator</h2>
+            <p class="text-sm text-gray-600 mb-4">Enter the number of coin flips to calculate the exact probability of various outcomes.</p>
+            
+            <div class="flex gap-4 mb-6">
+                <input type="number" id="flip-input" min="1" placeholder="Number of flips (e.g., 10)" class="w-full border p-2 rounded focus:ring-2 focus:ring-blue-400 outline-none">
+                <button onclick="calculateCoinOdds()" class="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 transition">Calculate</button>
+            </div>
+
+            <div id="coin-results" class="hidden-tab bg-gray-50 border p-4 rounded text-sm space-y-3">
+                <div class="flex justify-between border-b pb-2"><span class="font-medium">All Heads:</span> <span id="res-all-heads" class="text-blue-700 font-mono"></span></div>
+                <div class="flex justify-between border-b pb-2"><span class="font-medium">All Tails:</span> <span id="res-all-tails" class="text-blue-700 font-mono"></span></div>
+                <div class="flex justify-between border-b pb-2"><span class="font-medium">More Heads than Tails:</span> <span id="res-more-heads" class="text-blue-700 font-mono"></span></div>
+                <div class="flex justify-between border-b pb-2"><span class="font-medium">Less Heads than Tails:</span> <span id="res-less-heads" class="text-blue-700 font-mono"></span></div>
+                <div class="flex justify-between border-b pb-2"><span class="font-medium">Under 33% Tails:</span> <span id="res-under-33-tails" class="text-blue-700 font-mono"></span></div>
+                <div class="flex justify-between"><span class="font-medium">Under 33% Heads:</span> <span id="res-under-33-heads" class="text-blue-700 font-mono"></span></div>
+            </div>
+        </div>
+
+        <!-- Birthday Simulator Tab -->
+        <div id="bday-tab" class="hidden-tab bg-white p-6 rounded-lg shadow-md mb-10">
+            <h2 class="text-xl font-bold mb-4">Birthday Demographics Simulator</h2>
+            <p class="text-sm text-gray-600 mb-4">Select a country and a birthday to estimate how many people in that nation share your exact birth date (based on 2026 population estimates).</p>
+            
+            <div class="space-y-4 mb-6">
+                <div>
+                    <label class="block text-sm font-medium mb-1">Select Country</label>
+                    <select id="country-select" class="w-full border p-2 rounded focus:ring-2 focus:ring-blue-400 outline-none">
+                        <!-- Populated via JS -->
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-1">Select Birthday</label>
+                    <input type="date" id="bday-input" class="w-full border p-2 rounded focus:ring-2 focus:ring-blue-400 outline-none">
+                </div>
+                <button onclick="calculateBirthdayShare()" class="w-full bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 transition">Simulate</button>
+            </div>
+
+            <div id="bday-results" class="hidden-tab text-center bg-blue-50 border border-blue-200 p-6 rounded-lg">
+                <p class="text-lg text-gray-700">An estimated</p>
+                <p id="bday-number" class="text-4xl font-bold text-blue-600 my-2">0</p>
+                <p class="text-lg text-gray-700">people in <span id="bday-country-name" class="font-semibold"></span> share this birthday!</p>
+                <p class="text-xs text-gray-500 mt-4">*Calculated assuming a uniform distribution over 365.25 days using 2026 population statistics.</p>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // --- Tab Switching Logic ---
+        function switchTab(tabId) {
+            document.getElementById('coin-tab').style.display = tabId === 'coin-tab' ? 'block' : 'none';
+            document.getElementById('bday-tab').style.display = tabId === 'bday-tab' ? 'block' : 'none';
+            
+            if (tabId === 'coin-tab') {
+                document.getElementById('btn-coin').classList.add('border-blue-600', 'text-blue-600', 'bg-blue-50');
+                document.getElementById('btn-coin').classList.remove('text-gray-500');
+                document.getElementById('btn-bday').classList.remove('border-blue-600', 'text-blue-600', 'bg-blue-50');
+                document.getElementById('btn-bday').classList.add('text-gray-500');
+            } else {
+                document.getElementById('btn-bday').classList.add('border-b-2', 'border-blue-600', 'text-blue-600', 'bg-blue-50');
+                document.getElementById('btn-bday').classList.remove('text-gray-500');
+                document.getElementById('btn-coin').classList.remove('border-blue-600', 'text-blue-600', 'bg-blue-50');
+                document.getElementById('btn-coin').classList.add('text-gray-500');
+            }
+        }
+
+        // --- Math Helpers for Coin Flips ---
+        
+        // Error function for Normal Approximation of large inputs
+        function erf(x) {
+            let sign = (x >= 0) ? 1 : -1;
+            x = Math.abs(x);
+            let a1 = 0.254829592, a2 = -0.284496736, a3 = 1.421413741, a4 = -1.453152027, a5 = 1.061405429;
+            let p = 0.3275911;
+            let t = 1.0 / (1.0 + p * x);
+            let y = 1.0 - (((((a5 * t + a4) * t) + a3) * t + a2) * t + a1) * t * Math.exp(-x * x);
+            return sign * y;
+        }
+
+        // Calculates exact probability of getting exactly K heads in N flips
+        function getBinomialProb(n, k) {
+            if (k < 0 || k > n) return 0;
+            if (k === 0 || k === n) return Math.pow(0.5, n);
+            
+            // If n is very large, standard JS numbers will overflow, so we use the Normal approximation
+            if (n > 1000) {
+                const mean = n / 2;
+                const stdDev = Math.sqrt(n / 4);
+                const z = (k - mean) / stdDev;
+                return (1 / (stdDev * Math.sqrt(2 * Math.PI))) * Math.exp(-0.5 * z * z);
+            }
+
+            let prob = 1;
+            let powerCount = n;
+            for (let i = 1; i <= k; i++) {
+                prob = prob * (n - i + 1) / i;
+                while (prob > 1 && powerCount > 0) {
+                    prob *= 0.5;
+                    powerCount--;
+                }
+            }
+            while (powerCount > 0) {
+                prob *= 0.5;
+                powerCount--;
+            }
+            return prob;
+        }
+
+        // Calculates probability of getting X <= limitK
+        function cumulativeProb(n, limitK) {
+            if (limitK < 0) return 0;
+            if (limitK >= n) return 1;
+            
+            if (n > 1000) {
+                const mean = n / 2;
+                const stdDev = Math.sqrt(n / 4);
+                const z = (limitK + 0.5 - mean) / stdDev; // continuity correction
+                return 0.5 * (1 + erf(z / Math.SQRT2));
+            }
+            
+            let sum = 0;
+            for (let k = 0; k <= limitK; k++) {
+                sum += getBinomialProb(n, k);
+            }
+            return sum;
+        }
+
+        function formatPercent(prob) {
+            if (prob === 0) return "0%";
+            const percent = prob * 100;
+            if (percent < 0.000001) return "< 0.000001%";
+            if (percent > 99.999999) return "> 99.999999%";
+            return parseFloat(percent.toPrecision(6)) + "%";
+        }
+
+        // --- Coin Flip Logic ---
+        function calculateCoinOdds() {
+            const n = parseInt(document.getElementById('flip-input').value);
+            if (!n || n < 1) return alert("Please enter a valid number of flips.");
+
+            const probAll = Math.pow(0.5, n);
+            
+            let probMoreHeads = 0;
+            if (n % 2 !== 0) {
+                probMoreHeads = 0.5; // Exactly symmetrical, no ties possible
+            } else {
+                const probTie = getBinomialProb(n, n / 2);
+                probMoreHeads = (1 - probTie) / 2;
+            }
+
+            // "Under 33%" means strictly less than 33%.
+            // e.g., 33% of 100 is 33. Under 33% means 32 or fewer.
+            const threshold = Math.ceil(n * 0.33) - 1; 
+            const probUnder33 = cumulativeProb(n, threshold);
+
+            document.getElementById('res-all-heads').innerText = formatPercent(probAll) + ` (1 in ${(1/probAll).toLocaleString(undefined, {maximumFractionDigits:0})})`;
+            document.getElementById('res-all-tails').innerText = formatPercent(probAll);
+            document.getElementById('res-more-heads').innerText = formatPercent(probMoreHeads);
+            document.getElementById('res-less-heads').innerText = formatPercent(probMoreHeads); // Symmetrical to more heads
+            document.getElementById('res-under-33-tails').innerText = formatPercent(probUnder33);
+            document.getElementById('res-under-33-heads').innerText = formatPercent(probUnder33);
+
+            document.getElementById('coin-results').style.display = 'block';
+        }
+
+        // --- Birthday Simulator Logic ---
+        
+        // Data updated to 2026 World Population metrics
+        const countryData = {
+            "India": 1476625576,
+            "China": 1412914089,
+            "United States": 349035494,
+            "Indonesia": 287886782,
+            "Pakistan": 259299791,
+            "Nigeria": 242431832,
+            "Brazil": 213562666,
+            "Bangladesh": 177818044,
+            "Russia": 143394458,
+            "Mexico": 132997658,
+            "Japan": 122427731,
+            "United Kingdom": 69931528,
+            "France": 66746401,
+            "Germany": 83644258,
+            "South Africa": 65453084,
+            "Canada": 40467728,
+            "Australia": 27227096,
+            "Worldwide (Earth)": 8298979488
+        };
+
+        window.onload = () => {
+            const select = document.getElementById('country-select');
+            for (const [country, pop] of Object.entries(countryData)) {
+                let option = document.createElement('option');
+                option.value = pop;
+                option.text = country;
+                select.add(option);
+            }
+        };
+
+        function calculateBirthdayShare() {
+            const population = parseInt(document.getElementById('country-select').value);
+            const selectElement = document.getElementById('country-select');
+            const countryName = selectElement.options[selectElement.selectedIndex].text;
+            const dateInput = document.getElementById('bday-input').value;
+
+            if (!dateInput) return alert("Please select a date first.");
+
+            // Standard statistical baseline assumes uniform distribution across 365.25 days (accounting for leap years)
+            const sharedBirthdays = Math.round(population / 365.25);
+
+            document.getElementById('bday-number').innerText = sharedBirthdays.toLocaleString();
+            document.getElementById('bday-country-name').innerText = countryName;
+            document.getElementById('bday-results').style.display = 'block';
+        }
+    </script>
+</body>
+</html>
