@@ -38,6 +38,28 @@ for (const opts of [{ starCatch: true }, { starCatch: true, keepOnBoom: true }])
   near(m.mean / e.cost, 1, 0.08, 'sf mc vs exact ' + JSON.stringify(opts));
 }
 near(C.sfBaseCost(200, 15), 71.3e6, 1e5, 'sf base cost lv200 15★');
+// New-system cost divisors: lv250 15★ ≈ 139M, 20★ ≈ 290M, 21★ ≈ 527M (KMS calculator values)
+near(C.sfBaseCost(250, 15) / 1e6, 139.3, 0.5, 'lv250 15★');
+near(C.sfBaseCost(250, 20) / 1e6, 290.2, 0.5, 'lv250 20★');
+near(C.sfBaseCost(250, 21) / 1e6, 526.8, 0.5, 'lv250 21★');
+// Rates with star catching match the published table (2.05% / 6.74% / 12.64% boom)
+near(C.sfAttempt(200, 15, { starCatch: true }).b, 0.0206, 0.0002, '15★ boom');
+near(C.sfAttempt(200, 17, { starCatch: true }).b, 0.0674, 0.0002, '17★ boom');
+near(C.sfAttempt(200, 21, { starCatch: true }).b, 0.1264, 0.0002, '21★ boom');
+near(C.sfAttempt(200, 22, {}).b, 0.17, 1e-9, '22★ boom');
+// Safeguard: +200% of base, not discounted, 0% boom; only 15–17★; Mode 4 maps to safeguard on 15–17★
+const sg = C.sfAttempt(200, 16, { sfEvent30: true, plan: { 16: 'sg' } });
+near(sg.cost, C.sfBaseCost(200, 16) * (0.7 + 2), 1, 'safeguard cost');
+assert.strictEqual(sg.b, 0);
+assert.strictEqual(C.sfAttempt(200, 18, { plan: { 18: 'sg' } }).choice, '1');
+assert.strictEqual(C.sfAttempt(200, 16, { plan: { 16: '4' } }).choice, 'sg');
+assert.strictEqual(C.sfAttempt(200, 19, { plan: { 19: '4' } }).b, 0);
+// GMS trace restore destinations
+assert.deepStrictEqual([15, 20, 21, 22, 23, 26].map((x) => C.sfDest(x, {})), [12, 12, 17, 17, 19, 20]);
+// Optimizer never increases expected cost, and with expensive booms it safeguards
+const opt = C.sfOptimizePlan(200, 15, 22, { starCatch: true }, 5e9);
+assert.ok(opt.cost <= C.sfExpected(200, 15, 22, { starCatch: true }, 5e9).cost + 1);
+assert.ok(['sg', '2', '3'].includes(opt.plan[15]), 'expensive booms → protect 15★');
 
 // Potential odds are probabilities and decrease with target
 const p30 = C.potProbability(200, 'stat', 'black', 30), p33 = C.potProbability(200, 'stat', 'black', 33);

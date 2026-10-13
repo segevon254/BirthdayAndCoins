@@ -164,20 +164,42 @@
   };
 
   // ---------------------------------------------------------------------------
-  // Star Force (post-2025 GMS system: no drop on fail, max 30★, booms restore at 12★).
+  // Star Force — GMS post-v.264 system (no star drops on failure, 30★ cap) with
+  // the v.269 Enhancement Modes. Sources: MapleStory Wiki / DigitalTQ rate table,
+  // NamuWiki cost divisors (match KMS calculators), v.269 patch notes.
   // success[s] = chance s→s+1; boomOfFail[s] = fraction of failures that destroy.
   // ---------------------------------------------------------------------------
   const SF = {
     success: [0.95, 0.90, 0.85, 0.85, 0.80, 0.75, 0.70, 0.65, 0.60, 0.55, 0.50, 0.45, 0.40, 0.35, 0.30,
-      0.30, 0.30, 0.15, 0.15, 0.15, 0.30, 0.15, 0.10, 0.10, 0.10, 0.10, 0.07, 0.05, 0.03, 0.01],
+      0.30, 0.30, 0.15, 0.15, 0.15, 0.30, 0.15, 0.15, 0.10, 0.10, 0.10, 0.07, 0.05, 0.03, 0.01],
     boomOfFail: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
       0.03, 0.03, 0.08, 0.08, 0.10, 0.15, 0.15, 0.20, 0.20, 0.20, 0.20, 0.20, 0.20, 0.20, 0.20],
+    // cost = 1000 + L³(s+1)^2.7 / div[s] for s ≥ 10 (L rounded down to 10s)
+    costDiv: { 10: 400, 11: 220, 12: 150, 13: 110, 14: 75, 17: 150, 18: 70, 19: 45, 21: 125 },
+    costDivDefault: 200,
+    // GMS trace restore: where a destroyed item comes back.
+    boomDest: (s) => (s <= 20 ? 12 : s <= 22 ? 17 : s <= 25 ? 19 : 20),
     restoreStar: 12,
+    safeguardStars: [15, 16, 17],          // safeguard: +200% of base cost (no discounts), 0% boom
+    modeStars: [15, 16, 17, 18, 19, 20, 21], // Enhancement Modes apply to 15★–21★ attempts
+    // Boom-rate multiplier vs Mode 1 per star. Points at 15/17/21★ from community tables
+    // (2.05→1.37→0.69%, 6.74→4.21→1.69%, 12.64→8.74→4.47%); the stars in between are interpolated.
+    modeBoom: {
+      2: { 15: 0.667, 16: 0.667, 17: 0.625, 18: 0.625, 19: 0.65, 20: 0.67, 21: 0.69 },
+      3: { 15: 0.333, 16: 0.333, 17: 0.25, 18: 0.25, 19: 0.29, 20: 0.32, 21: 0.354 },
+      4: { 15: 0, 16: 0, 17: 0, 18: 0, 19: 0, 20: 0, 21: 0 },
+    },
     // armor ATT gained at star s+1 for item level 200 (index = target star). Other brackets shift.
     armorAtt200: { 16: 12, 17: 13, 18: 14, 19: 15, 20: 16, 21: 17, 22: 19, 23: 21, 24: 23, 25: 25, 26: 27, 27: 29, 28: 31, 29: 33, 30: 35 },
     weaponAtt200: { 16: 13, 17: 13, 18: 14, 19: 14, 20: 15, 21: 16, 22: 17, 23: 34, 24: 35, 25: 36, 26: 37, 27: 38, 28: 39, 29: 40, 30: 41 },
     approxAbove25: true,
   };
+  // Strategy options per star: '1' standard, 'sg' safeguard (15–17), '2'/'3' modes, '4' no-boom mode (18–21).
+  const SF_OPTIONS = { 1: 'Mode 1 (standard)', sg: 'Safeguard', 2: 'Mode 2', 3: 'Mode 3', 4: 'Mode 4 (no boom)' };
+  function sfOptionsFor(s) {
+    if (s < 15 || s > 21) return ['1'];
+    return s <= 17 ? ['1', 'sg', '2', '3'] : ['1', '2', '3', '4'];
+  }
 
   // ---------------------------------------------------------------------------
   // Potential (Legendary). Line odds are approximations of GMS cube tables.
@@ -278,7 +300,7 @@
 
   const DATA = {
     CLASSES, BOSSES, FAMILIAR_TIERS, FAMILIAR_LINES, FAMILIAR_BOSS_CAP, FAMILIAR_PRESETS, DOPING,
-    HYPER_COST, HYPER_STATS, hyperPointsAtLevel, LEGION_REGIONS, SF, CUBES, POT_LINES, potValues,
+    HYPER_COST, HYPER_STATS, hyperPointsAtLevel, LEGION_REGIONS, SF, SF_OPTIONS, sfOptionsFor, CUBES, POT_LINES, potValues,
     HEXA_COSTS, HEXA_CURVES, DEFAULT_HEXA, SEED_RINGS, GEAR_DEFAULT, DPS_PER_SCORE,
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = DATA;

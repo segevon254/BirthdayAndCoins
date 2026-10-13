@@ -45,7 +45,8 @@
       targetBoss: 'hkaling',
       refBoss: 'hseren',
       settings: {
-        sfEvent30: false, sfBoomReduce: false, starCatch: true, mvp: 'none', safeguard: false, keepOnBoom: false,
+        sfEvent30: false, sfBoomReduce: false, starCatch: true, mvp: 'none', keepOnBoom: false,
+        sfPlan: { 15: '1', 16: '1', 17: '1', 18: '1', 19: '1', 20: '1', 21: '1' }, sfModeCost: { 2: 1.5, 3: 2.5, 4: 4 },
         cube: 'black', cubeCost: 22e6, famRerollCost: 10e6, famLineChance: 3,
         fragPrice: 0, symbolCost: 0, hyperResetCost: 10e6, budget: 50e9,
       },
@@ -64,6 +65,8 @@
     out.legion = Object.assign({}, d.legion, (s && s.legion) || {});
     out.badges = Object.assign({}, d.badges, (s && s.badges) || {});
     out.ring = Object.assign({}, d.ring, (s && s.ring) || {});
+    if (s && s.settings && s.settings.safeguard && !s.settings.sfPlan) { [15, 16, 17].forEach((k) => { out.settings.sfPlan[k] = 'sg'; }); }
+    delete out.settings.safeguard;
     return out;
   }
 
@@ -474,41 +477,48 @@
     const L3 = L * L * L;
     let c;
     if (s < 10) c = 1000 + L3 * (s + 1) / 25;
-    else {
-      const div = { 10: 400, 11: 220, 12: 150, 13: 110, 14: 75 }[s] || 200;
-      c = 1000 + L3 * Math.pow(s + 1, 2.7) / div;
-    }
+    else c = 1000 + L3 * Math.pow(s + 1, 2.7) / (D.SF.costDiv[s] || D.SF.costDivDefault);
     return Math.round(c / 100) * 100;
+  }
+  /** Strategy chosen for star s: '1' | 'sg' | '2' | '3' | '4'. */
+  function sfChoice(s, opts) {
+    const plan = (opts && opts.plan) || {};
+    let c = plan[s] != null ? String(plan[s]) : (opts && opts.safeguard && s >= 15 && s <= 17 ? 'sg' : '1');
+    if (!D.sfOptionsFor(s).includes(c)) c = c === '4' && s >= 15 && s <= 17 ? 'sg' : '1';
+    return c;
   }
   function sfAttempt(level, s, opts) {
     opts = opts || {};
-    let cost = sfBaseCost(level, s);
+    const base = sfBaseCost(level, s);
+    const choice = sfChoice(s, opts);
+    const modeCost = (opts.modeCost && Number(opts.modeCost[choice])) || ({ 2: 1.5, 3: 2.5, 4: 4 }[choice] || 1);
     let disc = 1;
     if (opts.sfEvent30) disc *= 0.7;
     if (s < 17) disc *= ({ none: 1, silver: 0.97, gold: 0.95, diamond: 0.9 }[opts.mvp || 'none'] || 1);
-    let total = cost * disc;
+    let total = base * disc * (['2', '3', '4'].includes(choice) ? modeCost : 1);
     let p = D.SF.success[s] || 0;
     if (opts.starCatch) p = Math.min(1, p * 1.05);
     let b = (1 - p) * (D.SF.boomOfFail[s] || 0);
     if (opts.sfBoomReduce && s < 21) b *= 0.7;
-    if (opts.safeguard && s >= 15 && s <= 17) { total += cost * 2; b = 0; }
-    return { cost: total, p, b };
+    if (choice === 'sg') { total += base * 2; b = 0; } // +200% of base, discounts don't apply
+    else if (D.SF.modeBoom[choice]) b *= D.SF.modeBoom[choice][s] != null ? D.SF.modeBoom[choice][s] : 1;
+    return { cost: total, p, b, choice };
+  }
+  function sfDest(s, opts) {
+    if (opts && opts.keepOnBoom) return Math.min(s, 22); // KMS-style trace (keeps star, max 22★)
+    return D.SF.boomDest(s);
   }
   /**
-   * Expected mesos, booms and taps from star `from` to `to`. Solved exactly as a
-   * linear system: a boom sends the item to 12★ (or keeps its star when the
-   * restore option is on and the item is ≤22★) and costs `replaceCost`.
+   * Expected mesos, booms and taps from star `from` to `to`, solved exactly as a
+   * linear system. A boom sends the item to its trace-restore star and costs `replaceCost`.
    */
   function sfExpected(level, from, to, opts, replaceCost) {
     if (to <= from) return { cost: 0, booms: 0, attempts: 0 };
-    const R = D.SF.restoreStar;
-    const keep = !!(opts && opts.keepOnBoom);
-    const dest = (s) => (keep && s <= 22 ? s : R);
-    const lo = Math.min(from, R);
+    const lo = Math.min(from, D.SF.restoreStar);
     const n = to - lo;
     const att = [];
     for (let s = lo; s < to; s++) att.push(sfAttempt(level, s, opts));
-    // Build (p+b) E[s] - p E[s+1] - b E[dest] = rhs, for three right-hand sides.
+    // (p+b) E[s] - p E[s+1] - b E[dest(s)] = rhs
     const solve = (rhsFn) => {
       const M = [], v = [];
       for (let i = 0; i < n; i++) {
@@ -516,7 +526,7 @@
         const row = new Array(n).fill(0);
         row[i] += a.p + a.b;
         if (s + 1 < to) row[i + 1] -= a.p;
-        const di = dest(s) - lo;
+        const di = sfDest(s, opts) - lo;
         if (a.b > 0 && di >= 0 && di < n) row[di] -= a.b;
         M.push(row); v.push(rhsFn(a));
       }
@@ -539,6 +549,27 @@
       attempts: solve(() => 1),
     };
   }
+  /** Pick the cheapest expected strategy (mode / safeguard) per star by coordinate descent. */
+  function sfOptimizePlan(level, from, to, opts, replaceCost) {
+    const plan = {};
+    for (const s of D.SF.modeStars) plan[s] = sfChoice(s, opts);
+    const cost = (pl) => sfExpected(level, from, to, Object.assign({}, opts, { plan: pl }), replaceCost).cost;
+    let best = cost(plan);
+    for (let iter = 0; iter < 6; iter++) {
+      let improved = false;
+      for (const s of D.SF.modeStars) {
+        if (s >= to) continue;
+        for (const c of D.sfOptionsFor(s)) {
+          if (c === plan[s]) continue;
+          const t = Object.assign({}, plan, { [s]: c });
+          const v = cost(t);
+          if (v < best * (1 - 1e-9)) { best = v; Object.assign(plan, t); improved = true; }
+        }
+      }
+      if (!improved) break;
+    }
+    return { plan, cost: best };
+  }
   /** Monte-Carlo distribution of cost (median / p90). */
   function sfSimulate(level, from, to, opts, replaceCost, runs) {
     runs = runs || 1000;
@@ -559,12 +590,16 @@
         c += a.cost;
         const x = rnd();
         if (x < a.p) s++;
-        else if (x < a.p + a.b) { if (!(opts && opts.keepOnBoom && s <= 22)) s = D.SF.restoreStar; c += replaceCost || 0; }
+        else if (x < a.p + a.b) { s = sfDest(s, opts); c += replaceCost || 0; }
       }
       costs.push(c);
     }
     costs.sort((a, b) => a - b);
     return { p50: costs[Math.floor(runs * 0.5)], p90: costs[Math.floor(runs * 0.9)], mean: costs.reduce((a, b) => a + b, 0) / runs };
+  }
+  function sfOptsFrom(st) {
+    return { sfEvent30: st.sfEvent30, sfBoomReduce: st.sfBoomReduce, starCatch: st.starCatch, mvp: st.mvp,
+      keepOnBoom: st.keepOnBoom, plan: st.sfPlan || {}, modeCost: st.sfModeCost || {} };
   }
   function sfStatBracket(level) {
     if (level >= 250) return 17;
@@ -804,7 +839,7 @@
   // ---------------------------------------------------------------------------
   function upgradeCandidates(state, boss) {
     const st = state.settings;
-    const sfOpts = { sfEvent30: st.sfEvent30, sfBoomReduce: st.sfBoomReduce, starCatch: st.starCatch, mvp: st.mvp, safeguard: st.safeguard, keepOnBoom: st.keepOnBoom };
+    const sfOpts = sfOptsFrom(st);
     const out = [];
 
     (state.gear || []).forEach((item, gi) => {
@@ -948,7 +983,7 @@
     hexaFactor, hexaStepGain, hexaStepCost, hexaPlan, ringFactor, ringTable,
     dps, bossEstimate, bossTable, calibrate,
     EFFICIENCY_ROWS, gainOf, mainStatEquivalent, efficiencyTable,
-    sfMaxStars, sfBaseCost, sfAttempt, sfExpected, sfSimulate, sfDelta,
+    sfMaxStars, sfBaseCost, sfChoice, sfAttempt, sfDest, sfExpected, sfOptimizePlan, sfSimulate, sfDelta, sfOptsFrom,
     potProbability, potTargets, rollsForChance,
     hyperOptimize, legionOptimize, familiarOptions, bakeDelta, upgradeCandidates, budgetPlan,
     dojoFloorHp, dojoEstimate, encodeState, decodeState,

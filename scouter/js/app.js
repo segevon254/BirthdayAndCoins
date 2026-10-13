@@ -383,8 +383,9 @@
           </div>
           <div class="row" style="margin-top:10px">
             ${chk(st + 'starCatch', 'Star catching (+5%)')} ${chk(st + 'sfEvent30', '30% off event')} ${chk(st + 'sfBoomReduce', '-30% boom event (<21★)')}
-            ${chk(st + 'safeguard', 'Safeguard 15–17★')} ${chk(st + 'keepOnBoom', 'Booms keep stars (restore ≤22★)')}
           </div>
+          <div class="form" style="margin-top:8px">${restoreSel(st + 'keepOnBoom')}</div>
+          <p class="hint">Safeguard and Enhancement Mode per stage are set on the <b>Star Force</b> tab.</p>
         </div>
         <div class="card">
           <h2>Gear sheet</h2>
@@ -585,43 +586,66 @@
   };
 
   // ---- Star Force -------------------------------------------------------------
+  const restoreSel = (key) => sel(key, 'Boom restore rule', [['false', 'GMS trace (≤20★→12, 21–22→17, 23–25→19, 26+→20)'], ['true', 'Keep star (KMS trace, max 22★)']], { type: 'bool' });
   TABS.starforce = {
     render() {
       const st = 's:settings.';
+      const planRows = D.SF.modeStars.map((k) => `<tr><td>${k}★ → ${k + 1}★</td>
+        <td>${sel(`${st}sfPlan.${k}`, '', D.sfOptionsFor(k).map((c) => [c, D.SF_OPTIONS[c]]))}</td><td data-out="sfPlanRow${k}"></td></tr>`).join('');
       return `<div class="grid g2">
-        <div class="card"><h2>Star Force calculator <span class="tag">GMS 2025+ rates</span></h2>
+        <div class="card"><h2>Star Force calculator <span class="tag">GMS v.264+ system · v.269 modes</span></h2>
           <div class="form">
             ${inp('u:sf.level', 'Item level', { step: 1 })}${inp('u:sf.from', 'Current ★', { step: 1, min: 0, max: 29 })}
-            ${inp('u:sf.to', 'Target ★', { step: 1, min: 1, max: 30 })}${inp('u:sf.replace', 'Mesos to replace on boom')}
-            ${sel(st + 'mvp', 'MVP discount', [['none', 'None'], ['silver', 'Silver 3%'], ['gold', 'Gold 5%'], ['diamond', 'Diamond+ 10%']])}
+            ${inp('u:sf.to', 'Target ★', { step: 1, min: 1, max: 30 })}${inp('u:sf.replace', 'Mesos per boom (spare item / trace restore)')}
+            ${sel(st + 'mvp', 'MVP discount (<17★)', [['none', 'None'], ['silver', 'Silver 3%'], ['gold', 'Gold 5%'], ['diamond', 'Diamond+ 10%']])}
+            ${restoreSel(st + 'keepOnBoom')}
           </div>
           <div class="row" style="margin-top:10px">
-            ${chk(st + 'starCatch', 'Star catching')} ${chk(st + 'sfEvent30', '30% off')} ${chk(st + 'sfBoomReduce', '-30% boom (<21★)')}
-            ${chk(st + 'safeguard', 'Safeguard 15–17★')} ${chk(st + 'keepOnBoom', 'Booms keep stars (≤22★)')}
+            ${chk(st + 'starCatch', 'Star catching (+5% success)')} ${chk(st + 'sfEvent30', '30% off event')} ${chk(st + 'sfBoomReduce', '-30% boom event (<21★)')}
           </div>
           <div data-out="sfSummary" style="margin-top:12px"></div>
         </div>
-        <div class="card"><h2>Per-star breakdown</h2><div class="tablewrap" data-out="sfTable"></div></div>
-      </div>`;
+        <div class="card"><h2>Safeguard &amp; Enhancement Mode per stage</h2>
+          <p class="hint">On failure stars never drop. <b>Safeguard</b> works on the 15→16, 16→17 and 17→18 attempts: +200% of the base cost (discounts don't apply
+            to the extra) for 0% boom. It only combines with Mode 1. <b>Enhancement Modes 2–4</b> apply from 15★ to 21★: they cost more and boom less, and Mode 4 never booms
+            (18★+ only, since Safeguard covers 15–17★). The same plan is used in the Upgrades tab.</p>
+          <table><thead><tr><th>Stage</th><th class="l">Strategy</th><th>Per tap · boom</th></tr></thead><tbody>${planRows}</tbody></table>
+          <div class="form" style="margin-top:10px">
+            ${inp(st + 'sfModeCost.2', 'Mode 2 cost ×', { approx: true })}${inp(st + 'sfModeCost.3', 'Mode 3 cost ×', { approx: true })}${inp(st + 'sfModeCost.4', 'Mode 4 cost ×', { approx: true })}
+          </div>
+          <p class="hint">Nexon hasn't published the mode cost multipliers. Set them from the in-game Star Force window (cost shown ÷ Mode 1 cost).
+            Modes 2–3 boom rates come from community tables, interpolated between 15/17/21★. The patch notes say higher modes may also lower success at 18★+,
+            but the amount isn't published, so success is left unchanged.</p>
+          <div class="row" style="margin-top:8px"><button class="btn" data-act="sfAuto">Auto-pick cheapest per stage</button>
+            <button class="btn ghost" data-act="sfPlanReset">All Mode 1</button><span data-out="sfAutoInfo" class="hint" style="margin:0"></span></div>
+        </div>
+      </div>
+      <div class="card" style="margin-top:14px"><h2>Per-star breakdown</h2><div class="tablewrap" data-out="sfTable"></div></div>`;
     },
     outputs() {
-      const s = state.settings;
-      const o = { sfEvent30: s.sfEvent30, sfBoomReduce: s.sfBoomReduce, starCatch: s.starCatch, mvp: s.mvp, safeguard: s.safeguard, keepOnBoom: s.keepOnBoom };
+      const o = C.sfOptsFrom(state.settings);
       const lv = Number(ui.sf.level) || 200, f = Math.max(0, Number(ui.sf.from) || 0), t = Math.min(C.sfMaxStars(lv), Number(ui.sf.to) || 0);
-      const e = C.sfExpected(lv, f, t, o, Number(ui.sf.replace) || 0);
-      const m = C.sfSimulate(lv, f, t, o, Number(ui.sf.replace) || 0, 2000);
+      const rep = Number(ui.sf.replace) || 0;
+      const e = C.sfExpected(lv, f, t, o, rep);
+      const m = C.sfSimulate(lv, f, t, o, rep, 2000);
+      const base = C.sfExpected(lv, f, t, Object.assign({}, o, { plan: {} }), rep);
       out('sfSummary', `<div class="kpis" style="margin:0">
-        <div class="kpi main"><div class="k">Expected cost</div><div class="v">${big(e.cost)}</div><div class="s">${f}★ → ${t}★ (max ${C.sfMaxStars(lv)}★)</div></div>
+        <div class="kpi main"><div class="k">Expected cost</div><div class="v">${big(e.cost)}</div><div class="s">${f}★ → ${t}★ (max ${C.sfMaxStars(lv)}★) · all-Mode-1: ${big(base.cost)}</div></div>
         <div class="kpi"><div class="k">Median / 90% luck</div><div class="v" style="font-size:20px">${big(m.p50)} / ${big(m.p90)}</div><div class="s">2,000 simulations</div></div>
         <div class="kpi"><div class="k">Expected booms</div><div class="v">${e.booms.toFixed(2)}</div><div class="s">${e.attempts.toFixed(1)} taps</div></div></div>`);
+      for (const k of D.SF.modeStars) {
+        const a = C.sfAttempt(lv, k, o);
+        out('sfPlanRow' + k, `${big(a.cost)} · ${pct(a.b, 2)}`);
+      }
       const rows = [];
       for (let k = f; k < t; k++) {
         const a = C.sfAttempt(lv, k, o);
-        const step = C.sfExpected(lv, k, k + 1, o, Number(ui.sf.replace) || 0);
-        rows.push(`<tr><td>${k}★ → ${k + 1}★</td><td>${big(a.cost)}</td><td>${pct(a.p, 2)}</td><td>${pct(a.b, 2)}</td><td>${big(step.cost)}</td><td>${step.booms.toFixed(2)}</td></tr>`);
+        const step = C.sfExpected(lv, k, k + 1, o, rep);
+        rows.push(`<tr><td>${k}★ → ${k + 1}★</td><td class="l">${esc(D.SF_OPTIONS[a.choice])}</td><td>${big(a.cost)}</td><td>${pct(a.p, 2)}</td><td>${pct(1 - a.p - a.b, 2)}</td><td>${pct(a.b, 2)}</td>
+          <td>${a.b > 0 ? C.sfDest(k, o) + '★' : '—'}</td><td>${big(step.cost)}</td><td>${step.booms.toFixed(2)}</td></tr>`);
       }
-      out('sfTable', `<table><thead><tr><th>Step</th><th>Per tap</th><th>Success</th><th>Boom</th><th>Expected (incl. booms)</th><th>Booms</th></tr></thead><tbody>${rows.join('')}</tbody></table>
-        <p class="hint">Per-step "expected" includes rebuilding from 12★ after a boom (unless booms keep stars), so the steps don't add up to the total.</p>`);
+      out('sfTable', `<table><thead><tr><th>Step</th><th class="l">Strategy</th><th>Per tap</th><th>Success</th><th>Fail (keep ★)</th><th>Boom</th><th>Boom → </th><th>Expected (incl. booms)</th><th>Booms</th></tr></thead><tbody>${rows.join('')}</tbody></table>
+        <p class="hint">A step's "expected" cost includes climbing back after a boom, so the steps don't add up to the total.</p>`);
     },
   };
 
@@ -724,7 +748,9 @@ DPS     = HEXA score × ring × force × level × class × calibration × k</div
       <div class="card"><h2>Data sources &amp; caveats</h2><ul>
         <li>Boss HP, PDR and Sacred Power requirements: MapleHub / maplerhouse boss tables and MapleStory Wiki boss pages (2026). Older bosses are approximate (≈).</li>
         <li>Familiars: Nexon Maple Memo (Unique Boss = 40% only), and MapleStory Wiki (120% familiar boss cap). Nexon has not published line rates since v.264, so reroll odds are your own input.</li>
-        <li>Star Force: success/boom table for the 2025+ system (MapleStory Wiki), base meso formula with GMS level rounding. Exact 23★+ ATT values are estimates.</li>
+        <li>Star Force: GMS v.264+ system (no star drops, 30★ cap). Rates come from the MapleStory Wiki table and costs from the new per-star divisors
+          (17★ /150, 18★ /70, 19★ /45, 21★ /125). Safeguard covers 15–17★ at +200% of base cost. v.269 Enhancement Modes 1–4 are supported, and booms follow
+          the GMS trace restore stars. Mode 2–4 cost multipliers and 23★+ ATT are estimates.</li>
         <li>Cube line odds and prices, HEXA growth per level, seed ring effects other than Restraint, and Mu Lung floors are approximations. Every price is an input.</li>
         <li>MapleScouter (KMS) reads gear from Nexon's KMS Open API. GMS has no equivalent public API, so this tool uses manual entry, presets and share links instead.</li>
       </ul></div>
@@ -785,7 +811,7 @@ DPS     = HEXA score × ring × force × level × class × calibration × k</div
     const key = el.dataset.k;
     if (!key) return;
     const t = el.dataset.t;
-    let v = t === 'bool' ? el.checked : t === 'num' ? (el.value === '' ? 0 : Number(el.value)) : el.value;
+    let v = t === 'bool' ? (el.tagName === 'SELECT' ? el.value === 'true' : el.checked) : t === 'num' ? (el.value === '' ? 0 : Number(el.value)) : el.value;
     if (t === 'num' && !isFinite(v)) return;
     const [o, p] = resolve(key);
     setPath(o, p, v);
@@ -864,6 +890,15 @@ DPS     = HEXA score × ring × force × level × class × calibration × k</div
       try { state = C.mergeState(JSON.parse(document.getElementById('ioBox').value)); persist(); renderTab(); toast('Imported'); }
       catch (e) { toast('Invalid JSON'); }
     },
+    sfAuto() {
+      const lv = Number(ui.sf.level) || 200, f = Math.max(0, Number(ui.sf.from) || 0), t = Math.min(C.sfMaxStars(lv), Number(ui.sf.to) || 0);
+      const before = C.sfExpected(lv, f, t, C.sfOptsFrom(state.settings), Number(ui.sf.replace) || 0).cost;
+      const r = C.sfOptimizePlan(lv, f, t, C.sfOptsFrom(state.settings), Number(ui.sf.replace) || 0);
+      state.settings.sfPlan = r.plan;
+      persist(); renderTab();
+      out('sfAutoInfo', `Saved ${big(Math.max(0, before - C.sfExpected(lv, f, t, C.sfOptsFrom(state.settings), Number(ui.sf.replace) || 0).cost))} expected`);
+    },
+    sfPlanReset() { D.SF.modeStars.forEach((k) => { state.settings.sfPlan[k] = '1'; }); persist(); renderTab(); },
     bossReset() { state.bossOverrides = {}; persist(); renderTab(); },
     bossDel(v) { state.customBosses = state.customBosses.filter((b) => b.id !== v); persist(); renderTab(); },
     bossAdd() {

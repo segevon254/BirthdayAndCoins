@@ -23,7 +23,12 @@ GMS-specific additions:
 - **Familiars**: quick builder with presets, tier-based auto values, the 120% familiar Boss cap, badges, and reroll suggestions with expected cost.
 - **Upgrades: cost vs gain**: Star Force (exact Markov expectation plus Monte-Carlo median and p90, events, safeguard, MVP), Potential (cube line odds), Familiars, HEXA, Hyper, Legion, symbols and custom items. Each is ranked by damage gain per 1B mesos, with the bosses it unlocks.
 - **Budget planner**: a greedy upgrade path for a given meso budget.
-- **Star Force simulator**: GMS 2025+ success and boom rates.
+- **Star Force simulator**: the GMS v.264+ system.
+  - Rates: no star drops on failure, 30★ cap.
+  - Costs: the new per-star cost divisors.
+  - Booms: GMS trace-restore stars (≤20★→12, 21–22→17, 23–25→19, 26+→20).
+  - Strategy per stage: Safeguard on the 15→16 / 16→17 / 17→18 attempts (+200% of base cost, not discounted), or v.269 Enhancement Modes 1–4 (15–21★, Mode 4 no-boom from 18★).
+  - An auto-picker chooses the cheapest expected strategy for each stage.
 - **Editable data**: boss table overrides and custom bosses.
 
 ## Accuracy notes
