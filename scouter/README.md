@@ -31,6 +31,20 @@ GMS-specific additions:
   - An auto-picker chooses the cheapest expected strategy for each stage.
 - **Editable data**: boss table overrides and custom bosses.
 
+## Community data used
+
+- **Star Force Enhancement Modes (v.269).**
+  - Cost multipliers: 15–17★ 1 / 1.5 / 2.5× (Safeguard 3×); 18–21★ 1 / 2 / 3.5 / 6.5×.
+  - Success: 18/19/21★ 15 → 12 / 10 / 8%; 20★ 30 → 25 / 20%.
+  - Boom rates reproduce the published tables exactly.
+  - Sources: NamuWiki GMS section, tadeucci v269 calculator.
+- **Familiars.** GMS Upgrade Tracker sample odds: Legendary Boss 50% is 1 in 130 on line 1 and 1 in 13,000 on line 2; IED 50% is 1 in 190 / 1 in 20,000. Presets use realistic single-line familiars.
+- **Bosses.** maplerhouse / MapleHub 2026 HP tables. Baldrix needs 700 Sacred Power (MapleStory Wiki).
+- **HEXA.** Fragment and Sol Erda tables match the community totals: Origin 4,400/145, Mastery 2,252/83, Boost 3,383/123, Common 6,268/208.
+- **Potential.** GMS 13% tier at level 151+. KMS official option odds (9.76% prime / 7.26% non-prime main stat).
+- **Seed rings.** Restraint, Continuous and Weapon Jump values from patch notes and the wiki.
+- **Mu Lung.** Floor DEF by range, the −90% final damage, and the 40F boss HP (StrategyWiki).
+
 ## Accuracy notes
 
 GMS has no public gear API like KMS's Nexon Open API, so input is manual. Boss data comes from 2026 community tables. Entries marked ≈ are approximate and can be edited on the **Data** tab. Cube and familiar line odds, HEXA growth curves, some seed rings and Mu Lung are approximations, and every price is a user input. See the in-app **Guide** tab for formulas.

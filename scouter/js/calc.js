@@ -26,7 +26,7 @@
       att: 4200, attPct: 95,
       dmg: 90, boss: 330, ied: 94, cr: 100, cd: 95, fd: 0,
       statIncludesFamiliars: true,
-      familiars: JSON.parse(JSON.stringify(D.FAMILIAR_PRESETS.uniqueboss.fams)),
+      familiars: JSON.parse(JSON.stringify(D.FAMILIAR_PRESETS.unique40.fams)),
       badges: { boss: 0, ied: 0, dmg: 0 },
       hyper: { main: 0, cr: 5, cd: 10, ied: 10, dmg: 10, boss: 10, att: 10 },
       hyperExtra: 0,
@@ -34,7 +34,7 @@
       doping: { echo: true, xpot: false, guildboss: false, guildied: false, guilddmg: false, mvp: false, custom: false },
       dopingVals: {},
       useDoping: true,
-      ring: { id: 'restraint', level: 4 },
+      ring: { id: 'restraint', level: 4 }, weaponAtt: 700,
       burstShare: 45, burstLen: 20,
       hexa: JSON.parse(JSON.stringify(D.DEFAULT_HEXA)),
       useHexa: true,
@@ -46,8 +46,8 @@
       refBoss: 'hseren',
       settings: {
         sfEvent30: false, sfBoomReduce: false, starCatch: true, mvp: 'none', keepOnBoom: false,
-        sfPlan: { 15: '1', 16: '1', 17: '1', 18: '1', 19: '1', 20: '1', 21: '1' }, sfModeCost: { 2: 1.5, 3: 2.5, 4: 4 },
-        cube: 'black', cubeCost: 22e6, famRerollCost: 10e6, famLineChance: 3,
+        sfPlan: { 15: '1', 16: '1', 17: '1', 18: '1', 19: '1', 20: '1', 21: '1' },
+        cube: 'black', cubeCost: 22e6, famRerollCost: 10e6,
         fragPrice: 0, symbolCost: 0, hyperResetCost: 10e6, budget: 50e9,
       },
       custom: [],
@@ -71,6 +71,7 @@
   }
 
   const clone = (o) => JSON.parse(JSON.stringify(o));
+  const int0 = (n) => Math.round(n).toLocaleString('en-US');
 
   // ---------------------------------------------------------------------------
   // Bosses (with user overrides / custom bosses)
@@ -354,19 +355,24 @@
     return out;
   }
 
-  function ringFactor(state, S) {
+  /** Average damage multiplier from the equipped seed ring over a fight. */
+  function ringFactor(state, S, extraDelta) {
     const r = D.SEED_RINGS[(state.ring && state.ring.id) || 'none'];
-    if (!r || !r.duration) return 1;
-    const lv = Math.min(4, Math.max(1, Number(state.ring.level) || 1));
-    const e = r.attPct[lv - 1];
-    const attPct = (Number(state.attPct) || 0) / 100;
-    const mult = (1 + attPct + e) / (1 + attPct);
+    const lv = Math.min(4, Math.max(1, Number(state.ring && state.ring.level) || 1));
+    const dur = r && r.duration ? r.duration[lv - 1] : 0;
+    if (!dur) return 1;
+    const d = emptyDelta();
+    if (r.attPct) d.attPct = r.attPct[lv - 1];
+    if (r.boss) d.boss = r.boss[lv - 1];
+    if (r.statOfWeapon) d.mainUnaff = r.statOfWeapon[lv - 1] * (Number(state.weaponAtt) || 0);
+    const base = rawScore(S || effective(state, extraDelta));
+    const mult = base > 0 ? rawScore(effective(state, addDelta(extraDelta, d))) / base : 1;
     let w;
     if (r.burstAligned) {
       const burstShare = (Number(state.burstShare) || 0) / 100;
       const burstLen = Math.max(1, Number(state.burstLen) || 20);
-      w = burstShare * Math.min(1, r.duration / burstLen) * Math.min(1, 120 / r.cycle);
-    } else w = r.duration / r.cycle;
+      w = burstShare * Math.min(1, dur / burstLen) * Math.min(1, 120 / r.cycle);
+    } else w = Math.min(1, dur / (r.cycle || dur + (r.cooldownAfter || 0)));
     return 1 + w * (mult - 1);
   }
   function ringTable(state) {
@@ -391,7 +397,7 @@
     const S = effective(state, delta);
     const base = rawScore(S) * defMult(boss.pdr, S.ied) / REF.def;
     const hexa = state.useHexa ? hexaFactor(state.hexa) : 1;
-    return base * hexa * ringFactor(state, S) * forceMult(S, boss) * (levelMult(S.level, boss.level) / 1.1)
+    return base * hexa * ringFactor(state, S, delta) * forceMult(S, boss) * (levelMult(S.level, boss.level) / 1.1)
       * (Number(state.classFactor) || 1) * (Number(state.calib) || 1) * D.DPS_PER_SCORE;
   }
   function bossEstimate(state, boss, delta) {
@@ -491,18 +497,21 @@
     opts = opts || {};
     const base = sfBaseCost(level, s);
     const choice = sfChoice(s, opts);
-    const modeCost = (opts.modeCost && Number(opts.modeCost[choice])) || ({ 2: 1.5, 3: 2.5, 4: 4 }[choice] || 1);
+    const isMode = s >= 15 && s <= 21;
+    const mode = choice === 'sg' ? 1 : Number(choice) || 1;
+    const costMult = isMode ? ((s <= 17 ? D.SF.modeCost.low : D.SF.modeCost.high)[mode] || 1) : 1;
     let disc = 1;
     if (opts.sfEvent30) disc *= 0.7;
     if (s < 17) disc *= ({ none: 1, silver: 0.97, gold: 0.95, diamond: 0.9 }[opts.mvp || 'none'] || 1);
-    let total = base * disc * (['2', '3', '4'].includes(choice) ? modeCost : 1);
+    let total = base * disc * costMult;
     let p = D.SF.success[s] || 0;
+    if (isMode && D.SF.modeSuccess[mode] && D.SF.modeSuccess[mode][s] != null) p = D.SF.modeSuccess[mode][s];
     if (opts.starCatch) p = Math.min(1, p * 1.05);
-    let b = (1 - p) * (D.SF.boomOfFail[s] || 0);
+    const frac = isMode ? D.SF.modeBoomOfFail[mode][s] : (D.SF.boomOfFail[s] || 0);
+    let b = (1 - p) * frac;
     if (opts.sfBoomReduce && s < 21) b *= 0.7;
     if (choice === 'sg') { total += base * 2; b = 0; } // +200% of base, discounts don't apply
-    else if (D.SF.modeBoom[choice]) b *= D.SF.modeBoom[choice][s] != null ? D.SF.modeBoom[choice][s] : 1;
-    return { cost: total, p, b, choice };
+    return { cost: total, p, b, choice, costMult: choice === 'sg' ? 3 : costMult };
   }
   function sfDest(s, opts) {
     if (opts && opts.keepOnBoom) return Math.min(s, 22); // KMS-style trace (keeps star, max 22★)
@@ -599,7 +608,7 @@
   }
   function sfOptsFrom(st) {
     return { sfEvent30: st.sfEvent30, sfBoomReduce: st.sfBoomReduce, starCatch: st.starCatch, mvp: st.mvp,
-      keepOnBoom: st.keepOnBoom, plan: st.sfPlan || {}, modeCost: st.sfModeCost || {} };
+      keepOnBoom: st.keepOnBoom, plan: st.sfPlan || {} };
   }
   function sfStatBracket(level) {
     if (level >= 250) return 17;
@@ -773,34 +782,27 @@
   // ---------------------------------------------------------------------------
   // Familiar upgrade options
   // ---------------------------------------------------------------------------
+  /**
+   * Familiar reroll targets. A reroll changes both lines and a 2nd matching line is ~100× rarer than the 1st,
+   * so each option aims for the target on line 1 and assumes line 2 comes back as a non-combat line.
+   */
   function familiarOptions(state, boss) {
     const out = [];
-    const lineChance = Math.max(0.0001, (Number(state.settings.famLineChance) || 3) / 100);
-    const perReroll = 1 - Math.pow(1 - lineChance, 2);
     const famDeltaNow = familiarDelta(state.familiars, state.badges);
-    const targets = [{ type: 'boss', val: 50 }, { type: 'ied', val: 50 }];
+    const targets = [{ type: 'boss', val: 50 }, { type: 'boss', val: 45 }, { type: 'ied', val: 50 }, { type: 'ied', val: 45 }];
     state.familiars.forEach((f, fi) => {
-      // replace the weakest line of this familiar
-      let worstIdx = 0, worstGain = Infinity;
-      f.lines.forEach((ln, li) => {
-        const t = clone(state.familiars); t[fi].lines[li] = { type: 'none', val: 0 };
-        const g = gainOf(state, boss, addDelta(negDelta(famDeltaNow), familiarDelta(t, state.badges)));
-        const loss = -g;
-        if (loss < worstGain) { worstGain = loss; worstIdx = li; }
-      });
       for (const tg of targets) {
-        const cur = f.lines[worstIdx];
+        const cur = f.lines[0];
         if (cur.type === tg.type && Number(cur.val) >= tg.val) continue;
         const t = clone(state.familiars);
-        t[fi].tier = 'Legendary';
-        t[fi].lines[worstIdx] = clone(tg);
-        const delta = addDelta(negDelta(famDeltaNow), familiarDelta(t, state.badges));
-        const rerolls = 1 / perReroll;
+        t[fi] = { tier: 'Legendary', lines: [clone(tg), { type: 'none', val: 0 }] };
+        const odds = D.FAMILIAR_ODDS[tg.type + ':' + tg.val];
+        const rerolls = 1 / odds.line1;
         out.push({
-          label: `Familiar ${fi + 1}: line ${worstIdx + 1} → Legendary ${tg.type === 'boss' ? 'Boss' : 'IED'} ${tg.val}%`,
-          delta, rerolls, newFamiliars: t,
+          label: `Familiar ${fi + 1} → Legendary ${tg.type === 'boss' ? 'Boss' : 'IED'} ${tg.val}%`,
+          delta: addDelta(negDelta(famDeltaNow), familiarDelta(t, state.badges)), rerolls, newFamiliars: t,
           cost: rerolls * (Number(state.settings.famRerollCost) || 0),
-          capped: tg.type === 'boss' && familiarBossRaw(t) > D.FAMILIAR_BOSS_CAP,
+          capped: tg.type === 'boss' && familiarBossRaw(t) > D.FAMILIAR_BOSS_CAP + 1e-9,
         });
       }
     });
@@ -878,7 +880,7 @@
 
     for (const f of familiarOptions(state, boss)) {
       out.push({ cat: 'Familiar', label: f.label + (f.capped ? ' (hits 120% boss cap)' : ''), cost: f.cost, delta: f.delta,
-        note: `~${Math.round(f.rerolls)} rerolls at ${state.settings.famLineChance}% per line`,
+        note: `~${int0(f.rerolls)} rerolls (community odds: 1 in ${int0(f.rerolls)})`,
         apply: (s) => { s.familiars = clone(f.newFamiliars); } });
     }
 
@@ -949,17 +951,19 @@
   // ---------------------------------------------------------------------------
   // Mu Lung Dojo (experimental)
   // ---------------------------------------------------------------------------
-  function dojoFloorHp(n) { return 3e9 * Math.pow(1.2, n - 1); }
+  const DOJO_FLOORS = 80;
+  function dojoFloorHp(n) { return 8e9 * Math.pow(1.2, n - 40); } // anchored on the 40F boss (8B)
+  function dojoPdr(n) { return n < 60 ? 0.5 : n < 70 ? 1.0 : n < 80 ? 1.5 : 2.0; }
   function dojoEstimate(state) {
     let t = 0, floor = 0;
-    for (let n = 1; n <= 100; n++) {
-      const boss = { level: Math.min(290, 100 + 2 * n), pdr: n <= 20 ? 1.0 : n <= 40 ? 2.0 : 3.0, force: null, req: 0 };
-      const v = dps(state, boss);
+    for (let n = 1; n <= DOJO_FLOORS; n++) {
+      const boss = { level: Math.min(290, 100 + 2 * n), pdr: dojoPdr(n), force: null, req: 0 };
+      const v = dps(state, boss) * 0.1; // Dojo reduces final damage by 90%
       const need = dojoFloorHp(n) / v + 2;
       if (t + need > 900) break;
       t += need; floor = n;
     }
-    return { floor, time: t };
+    return { floor, time: t, maxed: floor >= DOJO_FLOORS };
   }
 
   // ---------------------------------------------------------------------------
@@ -986,7 +990,7 @@
     sfMaxStars, sfBaseCost, sfChoice, sfAttempt, sfDest, sfExpected, sfOptimizePlan, sfSimulate, sfDelta, sfOptsFrom,
     potProbability, potTargets, rollsForChance,
     hyperOptimize, legionOptimize, familiarOptions, bakeDelta, upgradeCandidates, budgetPlan,
-    dojoFloorHp, dojoEstimate, encodeState, decodeState,
+    dojoFloorHp, dojoPdr, dojoEstimate, encodeState, decodeState,
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = API;
   else root.MSCalc = API;

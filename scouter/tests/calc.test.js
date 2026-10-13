@@ -19,7 +19,7 @@ assert.strictEqual(C.arcaneMult(1320, 1320), 1);
 assert.strictEqual(C.arcaneMult(1320, 760), 1.5);
 
 // Familiar boss cap
-const fd = C.familiarDelta(D.FAMILIAR_PRESETS.bossied.fams);
+const fd = C.familiarDelta(D.FAMILIAR_PRESETS.dream.fams);
 near(fd.boss, 1.2, 1e-12, 'familiar boss cap');
 
 // Efficiency: every positive stat gives positive gain; crit rate at 100% gives none
@@ -84,5 +84,27 @@ assert.strictEqual(C.decodeState(C.encodeState(s)).mainStat, s.mainStat);
 // Budget plan stays within budget
 const plan = C.budgetPlan(s, C.bossById(s, s.targetBoss), 20e9, 10);
 assert.ok(plan.spent <= 20e9 && plan.gain > 0);
+
+// v.269 Enhancement Modes reproduce the community-published boom rates (with star catching)
+const PUB = { 15: [2.05, 1.37, 0.69], 17: [6.74, 4.21, 1.69], 18: [6.74, 4.37, 1.79], 19: [8.43, 6.12, 3.58], 20: [10.27, 7.38, 3.95], 21: [12.64, 8.74, 4.47] };
+for (const st of Object.keys(PUB)) PUB[st].forEach((v, i) => {
+  near(C.sfAttempt(200, +st, { starCatch: true, plan: { [st]: String(i + 1) } }).b * 100, v, 0.015, `mode ${i + 1} @${st}★`);
+});
+assert.strictEqual(C.sfAttempt(200, 19, { plan: { 19: '4' } }).costMult, 6.5);
+assert.strictEqual(C.sfAttempt(200, 16, { plan: { 16: '3' } }).costMult, 2.5);
+near(C.sfAttempt(200, 18, { plan: { 18: '4' } }).p, 0.08, 1e-12, 'mode 4 success');
+
+// HEXA cost tables match community totals
+const sum = (a) => a.reduce((x, y) => x + y, 0);
+assert.deepStrictEqual([sum(D.HEXA_COSTS.origin.frag), sum(D.HEXA_COSTS.mastery.frag), sum(D.HEXA_COSTS.enhance.frag), sum(D.HEXA_COSTS.common.frag)], [4400, 2252, 3383, 6268]);
+assert.deepStrictEqual([sum(D.HEXA_COSTS.origin.erda), sum(D.HEXA_COSTS.mastery.erda), sum(D.HEXA_COSTS.enhance.erda), sum(D.HEXA_COSTS.common.erda)], [145, 83, 123, 208]);
+
+// Familiar options use community odds
+const fo = C.familiarOptions(s, boss);
+assert.ok(fo.some((f) => Math.round(f.rerolls) === 130));
+
+// Seed rings: every ring helps, Mu Lung respects the 80F cap
+for (const r of C.ringTable(s)) assert.ok(r.gain > 0, r.label);
+assert.ok(C.dojoEstimate(s).floor <= 80);
 
 console.log('all calc tests passed');

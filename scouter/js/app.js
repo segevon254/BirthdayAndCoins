@@ -205,6 +205,7 @@
           <div class="form">
             ${sel('s:ring.id', 'Seed ring', Object.entries(D.SEED_RINGS).map(([k, r]) => [k, r.label]))}
             ${inp('s:ring.level', 'Ring level', { step: 1, min: 1, max: 4 })}
+            ${inp('s:weaponAtt', 'Main weapon ATT (for Weapon Jump)')}
             ${inp('s:burstShare', '% of damage dealt in burst', { title: 'Share of your 2-minute damage dealt inside burst windows' })}
             ${inp('s:burstLen', 'Burst window length (s)')}
             ${inp('s:classFactor', 'Class DPS factor', { title: '1.0 = average class. Set higher/lower if your class out- or under-performs its stats.' })}
@@ -375,8 +376,7 @@
             ${sel(st + 'cube', 'Potential reroll', Object.entries(D.CUBES).map(([k, c]) => [k, c.label]))}
             ${inp(st + 'cubeCost', 'Mesos per reroll', { approx: true, title: 'Cube price or meso reset cost on your server' })}
             ${sel(st + 'mvp', 'MVP discount (<17★)', [['none', 'None'], ['silver', 'Silver 3%'], ['gold', 'Gold 5%'], ['diamond', 'Diamond+ 10%']])}
-            ${inp(st + 'famRerollCost', 'Mesos per familiar reroll', { approx: true })}
-            ${inp(st + 'famLineChance', 'Chance a line hits the target (%)', { approx: true, title: 'Nexon has not published familiar line rates since v.264' })}
+            ${inp(st + 'famRerollCost', 'Mesos per familiar reroll (Red Familiar Card)', { title: 'Odds come from community samples; the card price is up to your server' })}
             ${inp(st + 'fragPrice', 'Mesos per Sol Erda fragment (0 = time-gated)')}
             ${inp(st + 'symbolCost', 'Mesos per authentic symbol level (0 = time-gated)')}
             ${inp(st + 'hyperResetCost', 'Hyper stat reset fee')}
@@ -610,12 +610,13 @@
             to the extra) for 0% boom. It only combines with Mode 1. <b>Enhancement Modes 2–4</b> apply from 15★ to 21★: they cost more and boom less, and Mode 4 never booms
             (18★+ only, since Safeguard covers 15–17★). The same plan is used in the Upgrades tab.</p>
           <table><thead><tr><th>Stage</th><th class="l">Strategy</th><th>Per tap · boom</th></tr></thead><tbody>${planRows}</tbody></table>
-          <div class="form" style="margin-top:10px">
-            ${inp(st + 'sfModeCost.2', 'Mode 2 cost ×', { approx: true })}${inp(st + 'sfModeCost.3', 'Mode 3 cost ×', { approx: true })}${inp(st + 'sfModeCost.4', 'Mode 4 cost ×', { approx: true })}
-          </div>
-          <p class="hint">Nexon hasn't published the mode cost multipliers. Set them from the in-game Star Force window (cost shown ÷ Mode 1 cost).
-            Modes 2–3 boom rates come from community tables, interpolated between 15/17/21★. The patch notes say higher modes may also lower success at 18★+,
-            but the amount isn't published, so success is left unchanged.</p>
+          <table style="margin-top:10px"><thead><tr><th>Community data</th><th>Mode 1</th><th>Mode 2</th><th>Mode 3</th><th>Mode 4</th></tr></thead><tbody>
+            <tr><td>Cost 15–17★</td><td>1×</td><td>1.5×</td><td>2.5×</td><td class="muted">Safeguard 3×</td></tr>
+            <tr><td>Cost 18–21★</td><td>1×</td><td>2×</td><td>3.5×</td><td>6.5×</td></tr>
+            <tr><td>Success 18/19/21★</td><td>15%</td><td>12%</td><td>10%</td><td>8%</td></tr>
+            <tr><td>Success 20★</td><td>30%</td><td>25%</td><td>20%</td><td>16%*</td></tr></tbody></table>
+          <p class="hint">Cost multipliers and Mode 4 success come from the NamuWiki GMS section. Mode 2–3 boom and success values reproduce the tadeucci v269 calculator's
+            published rates exactly. *Mode 4 at 20★ is assumed to be about half of Mode 1.</p>
           <div class="row" style="margin-top:8px"><button class="btn" data-act="sfAuto">Auto-pick cheapest per stage</button>
             <button class="btn ghost" data-act="sfPlanReset">All Mode 1</button><span data-out="sfAutoInfo" class="hint" style="margin:0"></span></div>
         </div>
@@ -652,13 +653,14 @@
   // ---- Mu Lung ---------------------------------------------------------------
   TABS.dojo = {
     render() { return `<div class="card"><h2>Mu Lung Dojo estimate <span class="tag approx">experimental</span></h2>
-      <p class="hint">Uses a 15-minute timer, a floor HP curve that grows ~20% per floor, and 2s of travel per floor. Treat it as a rough bracket,
-      and calibrate on the Scouter tab first.</p><div data-out="dojo"></div></div>`; },
+      <p class="hint">Community data: 15-minute timer, final damage reduced by 90% inside the Dojo, monster DEF 50% up to 59F, 100% at 60–69F, 150% at 70–79F and 200% at 80F,
+      and an 8B HP boss on 40F. Floor HP is assumed to grow 20% per floor from that anchor, with 2s of travel per floor. Calibrate on the Scouter tab first.</p><div data-out="dojo"></div></div>`; },
     outputs() {
       const e = C.dojoEstimate(state);
       out('dojo', `<div class="kpis"><div class="kpi main"><div class="k">Estimated floor</div><div class="v">${e.floor}F</div><div class="s">${dur(e.time)} used</div></div></div>
-        <table><thead><tr><th>Floor</th><th>Floor HP (model)</th></tr></thead><tbody>
-        ${[-2, -1, 0, 1, 2, 3].map((k) => e.floor + k).filter((n) => n >= 1).map((n) => `<tr><td>${n}F</td><td>${big(C.dojoFloorHp(n))}</td></tr>`).join('')}</tbody></table>`);
+        ${e.maxed ? '<p class="hint pos">You clear every floor (80F) in time.</p>' : ''}
+        <table><thead><tr><th>Floor</th><th>Floor HP (model)</th><th>DEF</th></tr></thead><tbody>
+        ${[-2, -1, 0, 1, 2, 3].map((k) => e.floor + k).filter((n) => n >= 1 && n <= 80).map((n) => `<tr><td>${n}F</td><td>${big(C.dojoFloorHp(n))}</td><td>${Math.round(C.dojoPdr(n) * 100)}%</td></tr>`).join('')}</tbody></table>`);
     },
   };
 
@@ -747,11 +749,14 @@ DPS     = HEXA score × ring × force × level × class × calibration × k</div
           bands by ratio. Level: 110% at equal level, +2%/level up to +5, −2.5%/level below.</p></div>
       <div class="card"><h2>Data sources &amp; caveats</h2><ul>
         <li>Boss HP, PDR and Sacred Power requirements: MapleHub / maplerhouse boss tables and MapleStory Wiki boss pages (2026). Older bosses are approximate (≈).</li>
-        <li>Familiars: Nexon Maple Memo (Unique Boss = 40% only), and MapleStory Wiki (120% familiar boss cap). Nexon has not published line rates since v.264, so reroll odds are your own input.</li>
+        <li>Familiars: Nexon Maple Memo (Unique Boss = 40% only) and MapleStory Wiki (120% familiar boss cap). Reroll odds are the GMS Upgrade Tracker's community estimates
+          (Legendary Boss 50%: 1 in 130 on line 1, 1 in 13,000 on line 2; IED 50%: 1 in 190 / 1 in 20,000). Nexon does not publish them.</li>
         <li>Star Force: GMS v.264+ system (no star drops, 30★ cap). Rates come from the MapleStory Wiki table and costs from the new per-star divisors
-          (17★ /150, 18★ /70, 19★ /45, 21★ /125). Safeguard covers 15–17★ at +200% of base cost. v.269 Enhancement Modes 1–4 are supported, and booms follow
-          the GMS trace restore stars. Mode 2–4 cost multipliers and 23★+ ATT are estimates.</li>
-        <li>Cube line odds and prices, HEXA growth per level, seed ring effects other than Restraint, and Mu Lung floors are approximations. Every price is an input.</li>
+          (17★ /150, 18★ /70, 19★ /45, 21★ /125). Safeguard covers 15–17★ at +200% of base cost. v.269 Enhancement Mode costs, success and boom rates come from
+          community data (NamuWiki, tadeucci calculator). Booms follow the GMS trace restore stars. 23★+ ATT values are estimates.</li>
+        <li>Cubes: GMS rolls the 13% tier on level 151+ items. Option odds use KMS's official tables, since GMS publishes none: 9.76% prime / 7.26% non-prime main stat;
+          all-stat and weapon ATT% are estimates. HEXA costs match community totals (Origin 4,400 / Mastery 2,252 / Boost 3,383 / Common 6,268 fragments).
+          Seed rings follow patch-note values; Risk Taker is an estimate. Mu Lung uses StrategyWiki floor DEF and the 90% damage reduction. Prices are inputs.</li>
         <li>MapleScouter (KMS) reads gear from Nexon's KMS Open API. GMS has no equivalent public API, so this tool uses manual entry, presets and share links instead.</li>
       </ul></div>
       <div class="card"><h2>Feature map vs MapleScouter</h2><table><tbody>

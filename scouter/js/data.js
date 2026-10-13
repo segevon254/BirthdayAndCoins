@@ -49,29 +49,29 @@
   const T = 1e12, Q = 1e15, B = 1e9;
   const BOSSES = [
     // id, name, level, pdr, force, req, hp, time, party, approx
-    ['hmag', 'Hard Magnus', 190, 1.2, null, 0, 120 * B, 30, 6, true],
-    ['cvel', 'Chaos Vellum', 190, 2.0, null, 0, 200 * B, 30, 6, true],
-    ['cpap', 'Chaos Papulatus', 190, 2.5, null, 0, 504 * B, 30, 6, true],
-    ['nlotus', 'Normal Lotus', 210, 3.0, 'arc', 100, 1.3 * T, 30, 6, true],
-    ['ndamien', 'Normal Damien', 210, 3.0, 'arc', 100, 1.2 * T, 30, 6, true],
-    ['nslime', 'Normal Guardian Angel Slime', 220, 3.0, 'arc', 500, 5 * T, 30, 6, true],
-    ['elucid', 'Easy Lucid', 230, 3.0, 'arc', 360, 12 * T, 30, 6, true],
-    ['nlucid', 'Normal Lucid', 230, 3.0, 'arc', 360, 24 * T, 30, 6, true],
-    ['ewill', 'Easy Will', 235, 3.0, 'arc', 560, 12.6 * T, 30, 6, true],
-    ['nwill', 'Normal Will', 235, 3.0, 'arc', 760, 25.2 * T, 30, 6, true],
-    ['hlotus', 'Hard Lotus', 210, 3.0, 'arc', 100, 41 * T, 30, 6, true],
-    ['hdamien', 'Hard Damien', 210, 3.0, 'arc', 100, 25.2 * T, 30, 6, true],
-    ['ngloom', 'Normal Gloom', 255, 3.0, 'arc', 730, 26 * T, 30, 6, true],
-    ['ndark', 'Normal Darknell', 265, 3.0, 'arc', 850, 26 * T, 30, 6, true],
-    ['nverus', 'Normal Verus Hilla', 250, 3.0, 'arc', 820, 88 * T, 30, 6, true],
-    ['hlucid', 'Hard Lucid', 230, 3.0, 'arc', 360, 117.6 * T, 30, 6, true],
-    ['hwill', 'Hard Will', 250, 3.0, 'arc', 760, 126 * T, 30, 6, true],
-    ['cslime', 'Chaos Guardian Angel Slime', 250, 3.0, 'arc', 800, 90 * T, 30, 6, true],
-    ['cgloom', 'Chaos Gloom', 255, 3.0, 'arc', 730, 132 * T, 30, 6, true],
-    ['hdark', 'Hard Darknell', 265, 3.0, 'arc', 850, 157 * T, 30, 6, true],
-    ['hverus', 'Hard Verus Hilla', 250, 3.0, 'arc', 900, 176 * T, 30, 6, true],
-    ['nseren', 'Normal Chosen Seren', 265, 3.8, 'sac', 200, 83 * T, 30, 6, true],
-    ['hbm', 'Hard Black Mage', 275, 3.0, 'arc', 1320, 360 * T, 60, 6, true],
+    ['hmag', 'Hard Magnus', 190, 1.2, null, 0, 120 * B, 30, 6, false],
+    ['cvel', 'Chaos Vellum', 190, 2.0, null, 0, 200 * B, 30, 6, false],
+    ['cpap', 'Chaos Papulatus', 190, 2.5, null, 0, 504 * B, 30, 6, false],
+    ['nlotus', 'Normal Lotus', 210, 3.0, 'arc', 100, 1.57 * T, 30, 6, false],
+    ['ndamien', 'Normal Damien', 210, 3.0, 'arc', 100, 1.2 * T, 30, 6, false],
+    ['nslime', 'Normal Guardian Angel Slime', 220, 3.0, 'arc', 500, 5 * T, 30, 6, false],
+    ['elucid', 'Easy Lucid', 230, 3.0, 'arc', 360, 12 * T, 30, 6, false],
+    ['nlucid', 'Normal Lucid', 230, 3.0, 'arc', 360, 24 * T, 30, 6, false],
+    ['ewill', 'Easy Will', 235, 3.0, 'arc', 560, 16.8 * T, 30, 6, false],
+    ['nwill', 'Normal Will', 235, 3.0, 'arc', 760, 25.2 * T, 30, 6, false],
+    ['hlotus', 'Hard Lotus', 210, 3.0, 'arc', 100, 33.5 * T, 30, 6, false],
+    ['hdamien', 'Hard Damien', 210, 3.0, 'arc', 100, 36 * T, 30, 6, false],
+    ['ngloom', 'Normal Gloom', 255, 3.0, 'arc', 730, 25.5 * T, 30, 6, false],
+    ['ndark', 'Normal Darknell', 265, 3.0, 'arc', 850, 26 * T, 30, 6, false],
+    ['nverus', 'Normal Verus Hilla', 250, 3.0, 'arc', 820, 88 * T, 30, 6, false],
+    ['hlucid', 'Hard Lucid', 230, 3.0, 'arc', 360, 117.6 * T, 30, 6, false],
+    ['hwill', 'Hard Will', 250, 3.0, 'arc', 760, 126 * T, 30, 6, false],
+    ['cslime', 'Chaos Guardian Angel Slime', 250, 3.0, 'arc', 800, 90 * T, 30, 6, false],
+    ['cgloom', 'Chaos Gloom', 255, 3.0, 'arc', 730, 127.5 * T, 30, 6, false],
+    ['hdark', 'Hard Darknell', 265, 3.0, 'arc', 850, 157.5 * T, 30, 6, false],
+    ['hverus', 'Hard Verus Hilla', 250, 3.0, 'arc', 900, 176 * T, 30, 6, false],
+    ['nseren', 'Normal Chosen Seren', 265, 3.8, 'sac', 200, 208 * T, 30, 6, false],
+    ['hbm', 'Hard Black Mage', 275, 3.0, 'arc', 1320, 472.5 * T, 60, 6, false],
     ['ekalos', 'Easy Kalos the Guardian', 270, 3.3, 'sac', 200, 357 * T, 30, 6, false],
     ['hseren', 'Hard Chosen Seren', 275, 3.8, 'sac', 200, 483 * T, 30, 6, false],
     ['ekaling', 'Easy Kaling', 275, 3.8, 'sac', 230, 921 * T, 30, 6, false],
@@ -81,11 +81,11 @@
     ['ckalos', 'Chaos Kalos the Guardian', 285, 3.8, 'sac', 330, 5.12 * Q, 30, 6, false],
     ['nlimbo', 'Normal Limbo', 285, 3.8, 'sac', 500, 6.48 * Q, 30, 3, false],
     ['eseren', 'Extreme Chosen Seren', 280, 3.8, 'sac', 200, 7.27 * Q, 30, 6, true],
-    ['nbaldrix', 'Normal Baldrix', 290, 3.8, 'sac', 700, 9.06 * Q, 30, 3, true],
+    ['nbaldrix', 'Normal Baldrix', 290, 3.8, 'sac', 700, 9.06 * Q, 30, 3, false],
     ['hkaling', 'Hard Kaling', 285, 3.8, 'sac', 350, 11.84 * Q, 30, 6, false],
     ['hlimbo', 'Hard Limbo', 285, 3.8, 'sac', 500, 12.55 * Q, 30, 3, false],
     ['hmalefic', 'Hard Radiant Malefic Star', 285, 3.8, 'sac', 550, 14.7 * Q, 30, 3, false],
-    ['hbaldrix', 'Hard Baldrix', 290, 3.8, 'sac', 700, 20.34 * Q, 30, 3, true],
+    ['hbaldrix', 'Hard Baldrix', 290, 3.8, 'sac', 700, 20.34 * Q, 30, 3, false],
     ['xkalos', 'Extreme Kalos the Guardian', 285, 3.8, 'sac', 440, 21.57 * Q, 30, 6, false],
     ['xkaling', 'Extreme Kaling', 285, 3.8, 'sac', 480, 54.59 * Q, 30, 6, false],
   ].map(([id, name, level, pdr, force, req, hp, time, party, approx]) =>
@@ -108,13 +108,21 @@
     mainPct: { label: 'Main stat %', values: { Rare: [3], Epic: [6], Unique: [9], Legendary: [12] }, approx: true },
   };
   const FAMILIAR_BOSS_CAP = 1.2;
+  // Community-estimated odds per reroll of a Legendary familiar (GMS Upgrade Tracker).
+  // line1 = chance the first line rolls it; line2 = chance the second line does.
+  const FAMILIAR_ODDS = {
+    'boss:50': { line1: 1 / 130, line2: 1 / 13000 },
+    'boss:45': { line1: 1 / 180, line2: 1 / 18000 },
+    'ied:50': { line1: 1 / 190, line2: 1 / 20000 },
+    'ied:45': { line1: 1 / 130, line2: 1 / 13000 },
+  };
+  // Realistic GMS setups: almost every familiar has one useful line (a 2nd matching line is ~1 in 13,000+).
   const FAMILIAR_PRESETS = {
-    bossied: { label: '3× Legendary: Boss 50 + IED 50', fams: [0, 1, 2].map(() => ({ tier: 'Legendary', lines: [{ type: 'boss', val: 50 }, { type: 'ied', val: 50 }] })) },
-    uniqueboss: { label: '3× Unique: Boss 40 + IED 40', fams: [0, 1, 2].map(() => ({ tier: 'Unique', lines: [{ type: 'boss', val: 40 }, { type: 'ied', val: 40 }] })) },
-    mixed: { label: '2× Unique Boss/IED + 1 Epic', fams: [
-      { tier: 'Unique', lines: [{ type: 'boss', val: 40 }, { type: 'ied', val: 35 }] },
-      { tier: 'Unique', lines: [{ type: 'boss', val: 40 }, { type: 'ied', val: 30 }] },
-      { tier: 'Epic', lines: [{ type: 'boss', val: 30 }, { type: 'ied', val: 20 }] }] },
+    cap45: { label: '3× Legendary Boss 45% (cap)', fams: [{ tier: 'Legendary', lines: [{ type: 'boss', val: 45 }, { type: 'none', val: 0 }] }, { tier: 'Legendary', lines: [{ type: 'boss', val: 45 }, { type: 'none', val: 0 }] }, { tier: 'Legendary', lines: [{ type: 'boss', val: 45 }, { type: 'none', val: 0 }] }] },
+    unique40: { label: '3× Unique Boss 40% (cap)', fams: [{ tier: 'Unique', lines: [{ type: 'boss', val: 40 }, { type: 'none', val: 0 }] }, { tier: 'Unique', lines: [{ type: 'boss', val: 40 }, { type: 'none', val: 0 }] }, { tier: 'Unique', lines: [{ type: 'boss', val: 40 }, { type: 'none', val: 0 }] }] },
+    bossied: { label: '2× Legendary Boss 50% + IED 50%', fams: [{ tier: 'Legendary', lines: [{ type: 'boss', val: 50 }, { type: 'none', val: 0 }] }, { tier: 'Legendary', lines: [{ type: 'boss', val: 50 }, { type: 'none', val: 0 }] }, { tier: 'Legendary', lines: [{ type: 'ied', val: 50 }, { type: 'none', val: 0 }] }] },
+    ied3: { label: '3× Legendary IED 50%', fams: [{ tier: 'Legendary', lines: [{ type: 'ied', val: 50 }, { type: 'none', val: 0 }] }, { tier: 'Legendary', lines: [{ type: 'ied', val: 50 }, { type: 'none', val: 0 }] }, { tier: 'Legendary', lines: [{ type: 'ied', val: 50 }, { type: 'none', val: 0 }] }] },
+    dream: { label: '3× two-line Boss 50 / IED 50 (whale)', fams: [0, 1, 2].map(() => ({ tier: 'Legendary', lines: [{ type: 'boss', val: 50 }, { type: 'ied', val: 50 }] })) },
     empty: { label: 'No familiars', fams: [0, 1, 2].map(() => ({ tier: 'Rare', lines: [{ type: 'none', val: 0 }, { type: 'none', val: 0 }] })) },
   };
 
@@ -182,12 +190,22 @@
     restoreStar: 12,
     safeguardStars: [15, 16, 17],          // safeguard: +200% of base cost (no discounts), 0% boom
     modeStars: [15, 16, 17, 18, 19, 20, 21], // Enhancement Modes apply to 15★–21★ attempts
-    // Boom-rate multiplier vs Mode 1 per star. Points at 15/17/21★ from community tables
-    // (2.05→1.37→0.69%, 6.74→4.21→1.69%, 12.64→8.74→4.47%); the stars in between are interpolated.
-    modeBoom: {
-      2: { 15: 0.667, 16: 0.667, 17: 0.625, 18: 0.625, 19: 0.65, 20: 0.67, 21: 0.69 },
-      3: { 15: 0.333, 16: 0.333, 17: 0.25, 18: 0.25, 19: 0.29, 20: 0.32, 21: 0.354 },
+    // v.269 Enhancement Modes (community data: NamuWiki GMS section, tadeucci v269 calculator).
+    // Cost multiplier vs Mode 1: 15–17★ 1 / 1.5 / 2.5 (Safeguard = 3×), 18–21★ 1 / 2 / 3.5 / 6.5.
+    modeCost: { low: { 1: 1, 2: 1.5, 3: 2.5 }, high: { 1: 1, 2: 2, 3: 3.5, 4: 6.5 } },
+    // Share of failures that boom, per mode (reproduces the published rates exactly with star catching).
+    modeBoomOfFail: {
+      1: { 15: 0.03, 16: 0.03, 17: 0.08, 18: 0.08, 19: 0.10, 20: 0.15, 21: 0.15 },
+      2: { 15: 0.02, 16: 0.02, 17: 0.05, 18: 0.05, 19: 0.07, 20: 0.10, 21: 0.10 },
+      3: { 15: 0.01, 16: 0.01, 17: 0.02, 18: 0.02, 19: 0.04, 20: 0.05, 21: 0.05 },
       4: { 15: 0, 16: 0, 17: 0, 18: 0, 19: 0, 20: 0, 21: 0 },
+    },
+    // From 18★ higher modes also lower success (base rates before star catching). 18/19/21★: 15% → 12 / 10 / 8%;
+    // 20★: 30% → 25 / 20%, both back-solved from the published boom rates; Mode 4 at 20★ assumed ~half (16%).
+    modeSuccess: {
+      2: { 18: 0.12, 19: 0.12, 20: 0.25, 21: 0.12 },
+      3: { 18: 0.10, 19: 0.10, 20: 0.20, 21: 0.10 },
+      4: { 18: 0.08, 19: 0.08, 20: 0.16, 21: 0.08 },
     },
     // armor ATT gained at star s+1 for item level 200 (index = target star). Other brackets shift.
     armorAtt200: { 16: 12, 17: 13, 18: 14, 19: 15, 20: 16, 21: 17, 22: 19, 23: 21, 24: 23, 25: 25, 26: 27, 27: 29, 28: 31, 29: 33, 30: 35 },
@@ -212,13 +230,14 @@
   };
   const POT_LINES = {
     // probability an individual line rolls the stat, and its value, for prime / non-prime lines
-    stat: { prime: { main: 0.11, all: 0.08 }, nonprime: { main: 0.11, all: 0.08 } },
-    att: { prime: { main: 0.13, all: 0 }, nonprime: { main: 0.13, all: 0 } },
+    // main-stat %: 9.7561% prime / 7.2581% non-prime (KMS official armor tables); all-stat% estimated.
+    stat: { prime: { main: 0.097561, all: 0.073171 }, nonprime: { main: 0.072581, all: 0.056452 } },
+    // weapon / secondary / emblem ATT% (estimate in line with the armor main-stat weights)
+    att: { prime: { main: 0.097561, all: 0 }, nonprime: { main: 0.072581, all: 0 } },
   };
   function potValues(level) {
     // [prime main, prime all, nonprime main, nonprime all]
-    if (level >= 250) return [14, 11, 11, 8];
-    if (level >= 160) return [13, 10, 10, 7];
+    if (level >= 151) return [13, 10, 10, 7]; // GMS: level 151+ items roll the 13% tier
     return [12, 9, 9, 6];
   }
 
@@ -228,12 +247,12 @@
   const HEXA_COSTS = {
     origin: { erda: [0, 0, 1, 1, 1, 2, 2, 2, 3, 3, 10, 3, 3, 4, 4, 4, 4, 4, 4, 5, 15, 5, 5, 5, 5, 5, 6, 6, 6, 7, 20],
       frag: [0, 0, 30, 35, 40, 45, 50, 55, 60, 65, 200, 80, 90, 100, 110, 120, 130, 140, 150, 160, 350, 170, 180, 190, 200, 210, 220, 230, 240, 250, 500] },
-    mastery: { erda: [0, 3, 1, 1, 1, 1, 1, 1, 2, 2, 5, 2, 2, 2, 2, 2, 2, 2, 2, 3, 8, 3, 3, 3, 3, 3, 3, 3, 4, 4, 10],
+    mastery: { erda: [0, 3, 1, 1, 1, 1, 1, 1, 1, 2, 5, 2, 2, 2, 2, 2, 2, 2, 2, 3, 8, 3, 3, 3, 3, 3, 3, 3, 4, 4, 10],
       frag: [0, 50, 15, 18, 20, 23, 25, 28, 30, 33, 100, 40, 45, 50, 55, 60, 65, 70, 75, 80, 175, 85, 90, 95, 100, 105, 110, 115, 120, 125, 250] },
     enhance: { erda: [0, 4, 1, 1, 1, 2, 2, 2, 3, 3, 8, 3, 3, 3, 3, 3, 3, 3, 3, 4, 12, 4, 4, 4, 4, 4, 5, 5, 5, 6, 15],
       frag: [0, 75, 23, 27, 30, 34, 38, 42, 45, 49, 150, 60, 68, 75, 83, 90, 98, 105, 113, 120, 263, 128, 135, 143, 150, 158, 165, 173, 180, 188, 375] },
-    common: { erda: [0, 7, 2, 2, 2, 3, 3, 3, 4, 4, 13, 4, 4, 5, 5, 5, 5, 5, 5, 7, 20, 7, 7, 7, 7, 7, 8, 8, 8, 9, 25],
-      frag: [0, 125, 38, 44, 50, 57, 63, 69, 75, 82, 250, 100, 113, 125, 138, 150, 163, 175, 188, 200, 438, 213, 225, 238, 250, 263, 275, 288, 300, 313, 625] },
+    common: { erda: [0, 7, 2, 2, 2, 3, 3, 3, 5, 5, 14, 5, 5, 5, 5, 5, 5, 5, 5, 7, 20, 7, 7, 7, 7, 7, 8, 8, 8, 11, 25],
+      frag: [0, 125, 38, 44, 50, 57, 63, 69, 75, 82, 300, 110, 124, 138, 152, 165, 179, 193, 207, 220, 525, 234, 248, 262, 275, 289, 303, 317, 330, 344, 750] },
   };
   // Relative damage multiplier of a core's skills at level L (L=0 means inactive / plain 5th job).
   const HEXA_CURVES = {
@@ -260,11 +279,15 @@
   // cycle the ring is active; burstAligned rings get extra weight from burst windows.
   // ---------------------------------------------------------------------------
   const SEED_RINGS = {
-    none: { label: 'None', attPct: [0, 0, 0, 0], duration: 0, cycle: 1, burstAligned: false },
-    restraint: { label: 'Ring of Restraint', attPct: [0.25, 0.5, 0.75, 1.0], duration: 9, cycle: 180, burstAligned: true },
-    continuous: { label: 'Continuous Ring', attPct: [0.15, 0.25, 0.35, 0.45], duration: 8, cycle: 12, burstAligned: false, approx: true },
-    risktaker: { label: 'Risk Taker Ring', attPct: [0.2, 0.3, 0.4, 0.5], duration: 12, cycle: 180, burstAligned: true, approx: true },
-    weaponjump: { label: 'Weapon Jump Ring', attPct: [0.04, 0.08, 0.12, 0.16], duration: 9, cycle: 9, burstAligned: false, approx: true },
+    none: { label: 'None', duration: [0, 0, 0, 0], cycle: 1 },
+    // Ring of Restraint: ATT +25/50/75/100% for 9s, 180s cooldown — used inside burst.
+    restraint: { label: 'Ring of Restraint', attPct: [0.25, 0.5, 0.75, 1.0], duration: [9, 9, 9, 9], cycle: 180, burstAligned: true },
+    // Continuous Ring (v227 / KMST 1.2.155): Boss +35/70/105/140%, ATT +4/6/8/10% for 5/6/7/8s, then a 12s re-activation cooldown.
+    continuous: { label: 'Continuous Ring', attPct: [0.04, 0.06, 0.08, 0.10], boss: [0.35, 0.70, 1.05, 1.40], duration: [5, 6, 7, 8], cooldownAfter: 12 },
+    // Weapon Jump: main stat +80/160/240/320% of main-weapon ATT for 15s, 120s cooldown (stat is not %-affected).
+    weaponjump: { label: 'Weapon Jump Ring', statOfWeapon: [0.8, 1.6, 2.4, 3.2], duration: [15, 15, 15, 15], cycle: 120, burstAligned: true, approx: true },
+    // Risk Taker values are not documented in community sources — rough estimate.
+    risktaker: { label: 'Risk Taker Ring', attPct: [0.2, 0.3, 0.4, 0.5], duration: [12, 12, 12, 12], cycle: 180, burstAligned: true, approx: true },
   };
 
   // ---------------------------------------------------------------------------
@@ -299,7 +322,7 @@
   const DPS_PER_SCORE = 1.8e6;
 
   const DATA = {
-    CLASSES, BOSSES, FAMILIAR_TIERS, FAMILIAR_LINES, FAMILIAR_BOSS_CAP, FAMILIAR_PRESETS, DOPING,
+    CLASSES, BOSSES, FAMILIAR_TIERS, FAMILIAR_LINES, FAMILIAR_BOSS_CAP, FAMILIAR_ODDS, FAMILIAR_PRESETS, DOPING,
     HYPER_COST, HYPER_STATS, hyperPointsAtLevel, LEGION_REGIONS, SF, SF_OPTIONS, sfOptionsFor, CUBES, POT_LINES, potValues,
     HEXA_COSTS, HEXA_CURVES, DEFAULT_HEXA, SEED_RINGS, GEAR_DEFAULT, DPS_PER_SCORE,
   };
