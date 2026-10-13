@@ -1,0 +1,286 @@
+/*
+ * GMS Scouter — game data tables.
+ *
+ * Values marked `approx: true` (or noted in comments) come from community sources
+ * (MapleStory Wiki, MapleHub / maplerhouse boss tables, Nexon Maple Memos) or are
+ * best estimates. Every table here can be overridden from the "Data" tab, so if a
+ * patch changes something you can fix it without touching code.
+ */
+(function (root) {
+  'use strict';
+
+  // ---------------------------------------------------------------------------
+  // Classes (GMS). `weapon` multiplier is only used for the displayed damage range.
+  // ---------------------------------------------------------------------------
+  const CLASSES = [
+    ['hero', 'Hero', 'STR', 'DEX', 1.34], ['paladin', 'Paladin', 'STR', 'DEX', 1.34],
+    ['darkknight', 'Dark Knight', 'STR', 'DEX', 1.49], ['fp', 'Arch Mage (F/P)', 'INT', 'LUK', 1.2],
+    ['il', 'Arch Mage (I/L)', 'INT', 'LUK', 1.2], ['bishop', 'Bishop', 'INT', 'LUK', 1.2],
+    ['bowmaster', 'Bowmaster', 'DEX', 'STR', 1.3], ['marksman', 'Marksman', 'DEX', 'STR', 1.35],
+    ['pathfinder', 'Pathfinder', 'DEX', 'STR', 1.3], ['nightlord', 'Night Lord', 'LUK', 'DEX', 1.75],
+    ['shadower', 'Shadower', 'LUK', 'DEX', 1.3], ['dualblade', 'Dual Blade', 'LUK', 'DEX', 1.3],
+    ['buccaneer', 'Buccaneer', 'STR', 'DEX', 1.7], ['corsair', 'Corsair', 'DEX', 'STR', 1.5],
+    ['cannoneer', 'Cannoneer', 'STR', 'DEX', 1.5], ['dawnwarrior', 'Dawn Warrior', 'STR', 'DEX', 1.34],
+    ['blazewizard', 'Blaze Wizard', 'INT', 'LUK', 1.2], ['windarcher', 'Wind Archer', 'DEX', 'STR', 1.3],
+    ['nightwalker', 'Night Walker', 'LUK', 'DEX', 1.75], ['thunderbreaker', 'Thunder Breaker', 'STR', 'DEX', 1.7],
+    ['mihile', 'Mihile', 'STR', 'DEX', 1.2], ['aran', 'Aran', 'STR', 'DEX', 1.49],
+    ['evan', 'Evan', 'INT', 'LUK', 1.2], ['mercedes', 'Mercedes', 'DEX', 'STR', 1.3],
+    ['phantom', 'Phantom', 'LUK', 'DEX', 1.3], ['luminous', 'Luminous', 'INT', 'LUK', 1.2],
+    ['shade', 'Shade', 'STR', 'DEX', 1.7], ['blaster', 'Blaster', 'STR', 'DEX', 1.7],
+    ['battlemage', 'Battle Mage', 'INT', 'LUK', 1.2], ['wildhunter', 'Wild Hunter', 'DEX', 'STR', 1.35],
+    ['mechanic', 'Mechanic', 'DEX', 'STR', 1.5], ['xenon', 'Xenon (enter STR+DEX+LUK / 2)', 'ALL', '-', 1.3125],
+    ['demonslayer', 'Demon Slayer', 'STR', 'DEX', 1.2], ['demonavenger', 'Demon Avenger (enter HP/14)', 'HP', 'STR', 1.3],
+    ['kaiser', 'Kaiser', 'STR', 'DEX', 1.34], ['angelicbuster', 'Angelic Buster', 'DEX', 'STR', 1.7],
+    ['cadena', 'Cadena', 'LUK', 'DEX', 1.3], ['kain', 'Kain', 'DEX', 'STR', 1.3],
+    ['illium', 'Illium', 'INT', 'LUK', 1.2], ['ark', 'Ark', 'STR', 'DEX', 1.7],
+    ['adele', 'Adele', 'STR', 'DEX', 1.3], ['khali', 'Khali', 'LUK', 'DEX', 1.3],
+    ['hoyoung', 'Hoyoung', 'LUK', 'DEX', 1.35], ['lara', 'Lara', 'INT', 'LUK', 1.2],
+    ['lynn', 'Lynn', 'INT', 'LUK', 1.2], ['moxuan', 'Mo Xuan', 'STR', 'DEX', 1.7],
+    ['sia', 'Sia Astelle', 'INT', 'LUK', 1.2], ['kanna', 'Kanna', 'INT', 'LUK', 1.35],
+    ['hayato', 'Hayato', 'STR', 'DEX', 1.25], ['zero', 'Zero', 'STR', 'DEX', 1.34],
+    ['kinesis', 'Kinesis', 'INT', 'LUK', 1.2], ['beasttamer', 'Beast Tamer', 'INT', 'LUK', 1.34],
+  ].map(([id, name, main, sub, weapon]) => ({ id, name, main, sub, weapon }));
+
+  // ---------------------------------------------------------------------------
+  // Bosses (GMS). hp = total HP across all phases. force: 'arc' | 'sac' | null.
+  // time = time limit (minutes). party = max party size.
+  // Sources: MapleHub / maplerhouse boss HP tables (2026), MapleStory Wiki boss pages.
+  // ---------------------------------------------------------------------------
+  const T = 1e12, Q = 1e15, B = 1e9;
+  const BOSSES = [
+    // id, name, level, pdr, force, req, hp, time, party, approx
+    ['hmag', 'Hard Magnus', 190, 1.2, null, 0, 120 * B, 30, 6, true],
+    ['cvel', 'Chaos Vellum', 190, 2.0, null, 0, 200 * B, 30, 6, true],
+    ['cpap', 'Chaos Papulatus', 190, 2.5, null, 0, 504 * B, 30, 6, true],
+    ['nlotus', 'Normal Lotus', 210, 3.0, 'arc', 100, 1.3 * T, 30, 6, true],
+    ['ndamien', 'Normal Damien', 210, 3.0, 'arc', 100, 1.2 * T, 30, 6, true],
+    ['nslime', 'Normal Guardian Angel Slime', 220, 3.0, 'arc', 500, 5 * T, 30, 6, true],
+    ['elucid', 'Easy Lucid', 230, 3.0, 'arc', 360, 12 * T, 30, 6, true],
+    ['nlucid', 'Normal Lucid', 230, 3.0, 'arc', 360, 24 * T, 30, 6, true],
+    ['ewill', 'Easy Will', 235, 3.0, 'arc', 560, 12.6 * T, 30, 6, true],
+    ['nwill', 'Normal Will', 235, 3.0, 'arc', 760, 25.2 * T, 30, 6, true],
+    ['hlotus', 'Hard Lotus', 210, 3.0, 'arc', 100, 41 * T, 30, 6, true],
+    ['hdamien', 'Hard Damien', 210, 3.0, 'arc', 100, 25.2 * T, 30, 6, true],
+    ['ngloom', 'Normal Gloom', 255, 3.0, 'arc', 730, 26 * T, 30, 6, true],
+    ['ndark', 'Normal Darknell', 265, 3.0, 'arc', 850, 26 * T, 30, 6, true],
+    ['nverus', 'Normal Verus Hilla', 250, 3.0, 'arc', 820, 88 * T, 30, 6, true],
+    ['hlucid', 'Hard Lucid', 230, 3.0, 'arc', 360, 117.6 * T, 30, 6, true],
+    ['hwill', 'Hard Will', 250, 3.0, 'arc', 760, 126 * T, 30, 6, true],
+    ['cslime', 'Chaos Guardian Angel Slime', 250, 3.0, 'arc', 800, 90 * T, 30, 6, true],
+    ['cgloom', 'Chaos Gloom', 255, 3.0, 'arc', 730, 132 * T, 30, 6, true],
+    ['hdark', 'Hard Darknell', 265, 3.0, 'arc', 850, 157 * T, 30, 6, true],
+    ['hverus', 'Hard Verus Hilla', 250, 3.0, 'arc', 900, 176 * T, 30, 6, true],
+    ['nseren', 'Normal Chosen Seren', 265, 3.8, 'sac', 200, 83 * T, 30, 6, true],
+    ['hbm', 'Hard Black Mage', 275, 3.0, 'arc', 1320, 360 * T, 60, 6, true],
+    ['ekalos', 'Easy Kalos the Guardian', 270, 3.3, 'sac', 200, 357 * T, 30, 6, false],
+    ['hseren', 'Hard Chosen Seren', 275, 3.8, 'sac', 200, 483 * T, 30, 6, false],
+    ['ekaling', 'Easy Kaling', 275, 3.8, 'sac', 230, 921 * T, 30, 6, false],
+    ['nkalos', 'Normal Kalos the Guardian', 280, 3.8, 'sac', 300, 1.06 * Q, 30, 6, false],
+    ['nmalefic', 'Normal Radiant Malefic Star', 280, 3.8, 'sac', 400, 3.26 * Q, 30, 3, false],
+    ['nkaling', 'Normal Kaling', 285, 3.8, 'sac', 330, 3.93 * Q, 30, 6, false],
+    ['ckalos', 'Chaos Kalos the Guardian', 285, 3.8, 'sac', 330, 5.12 * Q, 30, 6, false],
+    ['nlimbo', 'Normal Limbo', 285, 3.8, 'sac', 500, 6.48 * Q, 30, 3, false],
+    ['eseren', 'Extreme Chosen Seren', 280, 3.8, 'sac', 200, 7.27 * Q, 30, 6, true],
+    ['nbaldrix', 'Normal Baldrix', 290, 3.8, 'sac', 700, 9.06 * Q, 30, 3, true],
+    ['hkaling', 'Hard Kaling', 285, 3.8, 'sac', 350, 11.84 * Q, 30, 6, false],
+    ['hlimbo', 'Hard Limbo', 285, 3.8, 'sac', 500, 12.55 * Q, 30, 3, false],
+    ['hmalefic', 'Hard Radiant Malefic Star', 285, 3.8, 'sac', 550, 14.7 * Q, 30, 3, false],
+    ['hbaldrix', 'Hard Baldrix', 290, 3.8, 'sac', 700, 20.34 * Q, 30, 3, true],
+    ['xkalos', 'Extreme Kalos the Guardian', 285, 3.8, 'sac', 440, 21.57 * Q, 30, 6, false],
+    ['xkaling', 'Extreme Kaling', 285, 3.8, 'sac', 480, 54.59 * Q, 30, 6, false],
+  ].map(([id, name, level, pdr, force, req, hp, time, party, approx]) =>
+    ({ id, name, level, pdr, force, req, hp, time, party, approx }));
+
+  // ---------------------------------------------------------------------------
+  // Familiars (GMS, post v.264). Line values per tier. Nexon has not published
+  // line weights since v.264; Boss values follow the Maple Memo (Unique = 40% only),
+  // IED follows community guides. Non-boss lines are estimates — edit if needed.
+  // Familiar Boss Damage is capped at 120% total (MapleStory Wiki).
+  // ---------------------------------------------------------------------------
+  const FAMILIAR_TIERS = ['Rare', 'Epic', 'Unique', 'Legendary'];
+  const FAMILIAR_LINES = {
+    none: { label: '(empty / non-combat line)', values: { Rare: [0], Epic: [0], Unique: [0], Legendary: [0] } },
+    boss: { label: 'Boss Damage %', values: { Rare: [15, 20], Epic: [25, 30], Unique: [40], Legendary: [45, 50] } },
+    ied: { label: 'Ignore Enemy DEF %', values: { Rare: [10, 15], Epic: [20, 30], Unique: [30, 35, 40], Legendary: [45, 50] } },
+    dmg: { label: 'Damage %', values: { Rare: [5, 10], Epic: [15], Unique: [20, 25], Legendary: [30, 35] }, approx: true },
+    att: { label: 'ATT / MATT (flat)', values: { Rare: [10], Epic: [15, 20], Unique: [25, 30], Legendary: [35, 40] }, approx: true },
+    cr: { label: 'Critical Rate %', values: { Rare: [5], Epic: [10], Unique: [15], Legendary: [20] }, approx: true },
+    mainPct: { label: 'Main stat %', values: { Rare: [3], Epic: [6], Unique: [9], Legendary: [12] }, approx: true },
+  };
+  const FAMILIAR_BOSS_CAP = 1.2;
+  const FAMILIAR_PRESETS = {
+    bossied: { label: '3× Legendary: Boss 50 + IED 50', fams: [0, 1, 2].map(() => ({ tier: 'Legendary', lines: [{ type: 'boss', val: 50 }, { type: 'ied', val: 50 }] })) },
+    uniqueboss: { label: '3× Unique: Boss 40 + IED 40', fams: [0, 1, 2].map(() => ({ tier: 'Unique', lines: [{ type: 'boss', val: 40 }, { type: 'ied', val: 40 }] })) },
+    mixed: { label: '2× Unique Boss/IED + 1 Epic', fams: [
+      { tier: 'Unique', lines: [{ type: 'boss', val: 40 }, { type: 'ied', val: 35 }] },
+      { tier: 'Unique', lines: [{ type: 'boss', val: 40 }, { type: 'ied', val: 30 }] },
+      { tier: 'Epic', lines: [{ type: 'boss', val: 30 }, { type: 'ied', val: 20 }] }] },
+    empty: { label: 'No familiars', fams: [0, 1, 2].map(() => ({ tier: 'Rare', lines: [{ type: 'none', val: 0 }, { type: 'none', val: 0 }] })) },
+  };
+
+  // ---------------------------------------------------------------------------
+  // Doping / bossing buffs (GMS). Values editable on the Character tab.
+  // ---------------------------------------------------------------------------
+  const DOPING = [
+    { id: 'echo', name: 'Echo of Hero', stat: 'attPct', val: 4 },
+    { id: 'xpot', name: 'Extreme Potion (Red/Blue/Green/Gold)', stat: 'attFlat', val: 30 },
+    { id: 'guildboss', name: 'Guild skill: Boss Slayers', stat: 'boss', val: 30, approx: true },
+    { id: 'guildied', name: 'Guild skill: Undeterred', stat: 'ied', val: 30, approx: true },
+    { id: 'guilddmg', name: 'Guild skill: For the Guild', stat: 'dmg', val: 30, approx: true },
+    { id: 'mvp', name: 'MVP Superpower buff', stat: 'attFlat', val: 30, approx: true },
+    { id: 'custom', name: 'Custom (Boss %)', stat: 'boss', val: 0 },
+  ];
+
+  // ---------------------------------------------------------------------------
+  // Hyper stats. cost[i] = points to go from level i to i+1.
+  // ---------------------------------------------------------------------------
+  const HYPER_COST = [1, 2, 4, 8, 10, 15, 20, 25, 30, 35, 50, 65, 80, 95, 110];
+  const HYPER_STATS = {
+    main: { label: 'Main stat (+30 flat / lvl)', per: (l) => 30 * l },
+    cr: { label: 'Critical Rate', per: (l) => (l <= 5 ? l : 5 + 2 * (l - 5)) / 100 },
+    cd: { label: 'Critical Damage (+1% / lvl)', per: (l) => l / 100 },
+    ied: { label: 'Ignore DEF (+3% / lvl)', per: (l) => 3 * l / 100 },
+    dmg: { label: 'Damage (+3% / lvl)', per: (l) => 3 * l / 100 },
+    boss: { label: 'Boss Damage (3% to lv5, then 4%)', per: (l) => (l <= 5 ? 3 * l : 15 + 4 * (l - 5)) / 100 },
+    att: { label: 'ATT / MATT (+3 / lvl)', per: (l) => 3 * l },
+  };
+  function hyperPointsAtLevel(level) {
+    let pts = 0;
+    for (let L = 140; L <= level; L++) pts += 3 + Math.floor((L - 140) / 10);
+    return pts;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Legion board (offensive regions only). Geometry is ignored — the optimizer
+  // only reallocates cells within each region's cap.
+  // ---------------------------------------------------------------------------
+  const LEGION_REGIONS = {
+    boss: { label: 'Boss Damage (1% / cell)', per: 0.01, max: 40 },
+    ied: { label: 'Ignore DEF (1% / cell)', per: 0.01, max: 40 },
+    cd: { label: 'Critical Damage (0.5% / cell)', per: 0.005, max: 40 },
+    cr: { label: 'Critical Rate (1% / cell)', per: 0.01, max: 40 },
+    main: { label: 'Main stat (5 / cell, inner)', per: 5, max: 15 },
+    att: { label: 'ATT (1 / cell, inner)', per: 1, max: 15 },
+  };
+
+  // ---------------------------------------------------------------------------
+  // Star Force (post-2025 GMS system: no drop on fail, max 30★, booms restore at 12★).
+  // success[s] = chance s→s+1; boomOfFail[s] = fraction of failures that destroy.
+  // ---------------------------------------------------------------------------
+  const SF = {
+    success: [0.95, 0.90, 0.85, 0.85, 0.80, 0.75, 0.70, 0.65, 0.60, 0.55, 0.50, 0.45, 0.40, 0.35, 0.30,
+      0.30, 0.30, 0.15, 0.15, 0.15, 0.30, 0.15, 0.10, 0.10, 0.10, 0.10, 0.07, 0.05, 0.03, 0.01],
+    boomOfFail: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0.03, 0.03, 0.08, 0.08, 0.10, 0.15, 0.15, 0.20, 0.20, 0.20, 0.20, 0.20, 0.20, 0.20, 0.20],
+    restoreStar: 12,
+    // armor ATT gained at star s+1 for item level 200 (index = target star). Other brackets shift.
+    armorAtt200: { 16: 12, 17: 13, 18: 14, 19: 15, 20: 16, 21: 17, 22: 19, 23: 21, 24: 23, 25: 25, 26: 27, 27: 29, 28: 31, 29: 33, 30: 35 },
+    weaponAtt200: { 16: 13, 17: 13, 18: 14, 19: 14, 20: 15, 21: 16, 22: 17, 23: 34, 24: 35, 25: 36, 26: 37, 27: 38, 28: 39, 29: 40, 30: 41 },
+    approxAbove25: true,
+  };
+
+  // ---------------------------------------------------------------------------
+  // Potential (Legendary). Line odds are approximations of GMS cube tables.
+  // ---------------------------------------------------------------------------
+  const CUBES = {
+    red: { label: 'Red Cube', prime: [1, 0.10, 0.01], cost: 12e6 },
+    black: { label: 'Black Cube', prime: [1, 0.20, 0.05], cost: 22e6 },
+    bright: { label: 'Bright Cube', prime: [1, 0.20, 0.05], cost: 30e6 },
+    glowing: { label: 'Glowing Cube', prime: [1, 0.10, 0.01], cost: 15e6 },
+  };
+  const POT_LINES = {
+    // probability an individual line rolls the stat, and its value, for prime / non-prime lines
+    stat: { prime: { main: 0.11, all: 0.08 }, nonprime: { main: 0.11, all: 0.08 } },
+    att: { prime: { main: 0.13, all: 0 }, nonprime: { main: 0.13, all: 0 } },
+  };
+  function potValues(level) {
+    // [prime main, prime all, nonprime main, nonprime all]
+    if (level >= 250) return [14, 11, 11, 8];
+    if (level >= 160) return [13, 10, 10, 7];
+    return [12, 9, 9, 6];
+  }
+
+  // ---------------------------------------------------------------------------
+  // HEXA Matrix fragment / Sol Erda costs per level (index = target level).
+  // ---------------------------------------------------------------------------
+  const HEXA_COSTS = {
+    origin: { erda: [0, 0, 1, 1, 1, 2, 2, 2, 3, 3, 10, 3, 3, 4, 4, 4, 4, 4, 4, 5, 15, 5, 5, 5, 5, 5, 6, 6, 6, 7, 20],
+      frag: [0, 0, 30, 35, 40, 45, 50, 55, 60, 65, 200, 80, 90, 100, 110, 120, 130, 140, 150, 160, 350, 170, 180, 190, 200, 210, 220, 230, 240, 250, 500] },
+    mastery: { erda: [0, 3, 1, 1, 1, 1, 1, 1, 2, 2, 5, 2, 2, 2, 2, 2, 2, 2, 2, 3, 8, 3, 3, 3, 3, 3, 3, 3, 4, 4, 10],
+      frag: [0, 50, 15, 18, 20, 23, 25, 28, 30, 33, 100, 40, 45, 50, 55, 60, 65, 70, 75, 80, 175, 85, 90, 95, 100, 105, 110, 115, 120, 125, 250] },
+    enhance: { erda: [0, 4, 1, 1, 1, 2, 2, 2, 3, 3, 8, 3, 3, 3, 3, 3, 3, 3, 3, 4, 12, 4, 4, 4, 4, 4, 5, 5, 5, 6, 15],
+      frag: [0, 75, 23, 27, 30, 34, 38, 42, 45, 49, 150, 60, 68, 75, 83, 90, 98, 105, 113, 120, 263, 128, 135, 143, 150, 158, 165, 173, 180, 188, 375] },
+    common: { erda: [0, 7, 2, 2, 2, 3, 3, 3, 4, 4, 13, 4, 4, 5, 5, 5, 5, 5, 5, 7, 20, 7, 7, 7, 7, 7, 8, 8, 8, 9, 25],
+      frag: [0, 125, 38, 44, 50, 57, 63, 69, 75, 82, 250, 100, 113, 125, 138, 150, 163, 175, 188, 200, 438, 213, 225, 238, 250, 263, 275, 288, 300, 313, 625] },
+  };
+  // Relative damage multiplier of a core's skills at level L (L=0 means inactive / plain 5th job).
+  const HEXA_CURVES = {
+    origin: (L) => L <= 0 ? 0 : (1 + 0.035 * (L - 1)) * (L >= 10 ? 1.1 : 1) * (L >= 20 ? 1.1 : 1) * (L >= 30 ? 1.2 : 1),
+    mastery: (L) => L <= 0 ? 1 : (1.15 + 0.03 * (L - 1)) * (L >= 30 ? 1.05 : 1),
+    enhance: (L) => (1 + 0.02 * L) * (L >= 10 ? 1.05 : 1) * (L >= 20 ? 1.05 : 1) * (L >= 30 ? 1.05 : 1),
+    common: (L) => L <= 0 ? 0 : 1 + 0.03 * (L - 1),
+  };
+  const DEFAULT_HEXA = [
+    { name: 'Origin skill', kind: 'origin', level: 1, share: 15 },
+    { name: 'Mastery core 1', kind: 'mastery', level: 1, share: 25 },
+    { name: 'Mastery core 2', kind: 'mastery', level: 0, share: 10 },
+    { name: 'Mastery core 3', kind: 'mastery', level: 0, share: 5 },
+    { name: 'Mastery core 4', kind: 'mastery', level: 0, share: 5 },
+    { name: 'Enhancement core 1', kind: 'enhance', level: 0, share: 8 },
+    { name: 'Enhancement core 2', kind: 'enhance', level: 0, share: 6 },
+    { name: 'Enhancement core 3', kind: 'enhance', level: 0, share: 5 },
+    { name: 'Enhancement core 4', kind: 'enhance', level: 0, share: 4 },
+    { name: 'Sol Janus (common)', kind: 'common', level: 0, share: 3 },
+  ];
+
+  // ---------------------------------------------------------------------------
+  // Seed rings. effect per level is ATT% (as a fraction). uptime = fraction of a
+  // cycle the ring is active; burstAligned rings get extra weight from burst windows.
+  // ---------------------------------------------------------------------------
+  const SEED_RINGS = {
+    none: { label: 'None', attPct: [0, 0, 0, 0], duration: 0, cycle: 1, burstAligned: false },
+    restraint: { label: 'Ring of Restraint', attPct: [0.25, 0.5, 0.75, 1.0], duration: 9, cycle: 180, burstAligned: true },
+    continuous: { label: 'Continuous Ring', attPct: [0.15, 0.25, 0.35, 0.45], duration: 8, cycle: 12, burstAligned: false, approx: true },
+    risktaker: { label: 'Risk Taker Ring', attPct: [0.2, 0.3, 0.4, 0.5], duration: 12, cycle: 180, burstAligned: true, approx: true },
+    weaponjump: { label: 'Weapon Jump Ring', attPct: [0.04, 0.08, 0.12, 0.16], duration: 9, cycle: 9, burstAligned: false, approx: true },
+  };
+
+  // ---------------------------------------------------------------------------
+  // Gear slots and a default "typical endgame" gear sheet.
+  // kind: 'armor' | 'weapon' | 'acc'. pot = main potential total (stat% or ATT%).
+  // ---------------------------------------------------------------------------
+  const GEAR_DEFAULT = [
+    ['Weapon', 'weapon', 200, 22, 'att', 21],
+    ['Secondary', 'acc', 160, 0, 'att', 21],
+    ['Emblem', 'acc', 160, 0, 'att', 21],
+    ['Hat', 'armor', 200, 22, 'stat', 27],
+    ['Top', 'armor', 200, 22, 'stat', 27],
+    ['Bottom', 'armor', 200, 22, 'stat', 27],
+    ['Shoes', 'armor', 200, 22, 'stat', 27],
+    ['Gloves', 'armor', 200, 22, 'stat', 21],
+    ['Cape', 'armor', 200, 22, 'stat', 27],
+    ['Shoulder', 'armor', 200, 22, 'stat', 27],
+    ['Belt', 'armor', 200, 22, 'stat', 27],
+    ['Face Accessory', 'armor', 160, 22, 'stat', 27],
+    ['Eye Accessory', 'armor', 160, 22, 'stat', 27],
+    ['Earrings', 'armor', 160, 22, 'stat', 27],
+    ['Pendant 1', 'armor', 160, 22, 'stat', 27],
+    ['Pendant 2', 'armor', 160, 22, 'stat', 27],
+    ['Ring 1', 'armor', 160, 22, 'stat', 27],
+    ['Ring 2', 'armor', 160, 22, 'stat', 27],
+    ['Ring 3', 'armor', 160, 22, 'stat', 27],
+    ['Heart', 'armor', 160, 22, 'stat', 27],
+  ].map(([slot, kind, level, stars, potType, pot]) => ({ slot, kind, level, stars, potType, pot, replace: 0 }));
+
+  // Calibration: reference DPS per point of HEXA-adjusted Scouter score.
+  // Chosen so a ~170k-score character with mid HEXA progress solos Hard Seren in ~22 min.
+  const DPS_PER_SCORE = 1.8e6;
+
+  const DATA = {
+    CLASSES, BOSSES, FAMILIAR_TIERS, FAMILIAR_LINES, FAMILIAR_BOSS_CAP, FAMILIAR_PRESETS, DOPING,
+    HYPER_COST, HYPER_STATS, hyperPointsAtLevel, LEGION_REGIONS, SF, CUBES, POT_LINES, potValues,
+    HEXA_COSTS, HEXA_CURVES, DEFAULT_HEXA, SEED_RINGS, GEAR_DEFAULT, DPS_PER_SCORE,
+  };
+  if (typeof module !== 'undefined' && module.exports) module.exports = DATA;
+  else root.MSData = DATA;
+})(typeof window !== 'undefined' ? window : globalThis);
