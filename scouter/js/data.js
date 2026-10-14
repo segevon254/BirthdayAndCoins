@@ -295,27 +295,28 @@
   // kind: 'armor' | 'weapon' | 'acc'. pot = main potential total (stat% or ATT%).
   // ---------------------------------------------------------------------------
   const GEAR_DEFAULT = [
-    ['Weapon', 'weapon', 200, 22, 'att', 21],
-    ['Secondary', 'acc', 160, 0, 'att', 21],
-    ['Emblem', 'acc', 160, 0, 'att', 21],
-    ['Hat', 'armor', 200, 22, 'stat', 27],
-    ['Top', 'armor', 200, 22, 'stat', 27],
-    ['Bottom', 'armor', 200, 22, 'stat', 27],
-    ['Shoes', 'armor', 200, 22, 'stat', 27],
-    ['Gloves', 'armor', 200, 22, 'stat', 21],
-    ['Cape', 'armor', 200, 22, 'stat', 27],
-    ['Shoulder', 'armor', 200, 22, 'stat', 27],
-    ['Belt', 'armor', 200, 22, 'stat', 27],
-    ['Face Accessory', 'armor', 160, 22, 'stat', 27],
-    ['Eye Accessory', 'armor', 160, 22, 'stat', 27],
-    ['Earrings', 'armor', 160, 22, 'stat', 27],
-    ['Pendant 1', 'armor', 160, 22, 'stat', 27],
-    ['Pendant 2', 'armor', 160, 22, 'stat', 27],
-    ['Ring 1', 'armor', 160, 22, 'stat', 27],
-    ['Ring 2', 'armor', 160, 22, 'stat', 27],
-    ['Ring 3', 'armor', 160, 22, 'stat', 27],
-    ['Heart', 'armor', 160, 22, 'stat', 27],
-  ].map(([slot, kind, level, stars, potType, pot]) => ({ slot, kind, level, stars, potType, pot, replace: 0 }));
+    // slot label, kind, level, stars, pot type, pot %, slot type, catalog item
+    ['Weapon', 'weapon', 200, 22, 'att', 21, 'weapon', 'w_arcane'],
+    ['Secondary', 'acc', 160, 0, 'att', 21, 'secondary', null],
+    ['Emblem', 'acc', 100, 0, 'att', 21, 'emblem', 'e_gml'],
+    ['Hat', 'armor', 200, 22, 'stat', 27, 'hat', 'h_arcane'],
+    ['Top', 'armor', 150, 22, 'stat', 27, 'top', 't_cra'],
+    ['Bottom', 'armor', 150, 22, 'stat', 27, 'bottom', 'b_cra'],
+    ['Shoes', 'armor', 200, 22, 'stat', 27, 'shoes', 's_arcane'],
+    ['Gloves', 'armor', 200, 22, 'stat', 21, 'gloves', 'g_arcane'],
+    ['Cape', 'armor', 200, 22, 'stat', 27, 'cape', 'c_arcane'],
+    ['Shoulder', 'armor', 200, 22, 'stat', 27, 'shoulder', 'sh_arcane'],
+    ['Belt', 'armor', 200, 22, 'stat', 27, 'belt', 'bt_dreamy'],
+    ['Face Accessory', 'armor', 160, 22, 'stat', 27, 'face', 'f_berserked'],
+    ['Eye Accessory', 'armor', 160, 22, 'stat', 27, 'eye', 'y_eyepatch'],
+    ['Earrings', 'armor', 150, 22, 'stat', 27, 'earring', 'er_gollux'],
+    ['Pendant 1', 'armor', 150, 22, 'stat', 27, 'pendant', 'p_gollux'],
+    ['Pendant 2', 'armor', 160, 22, 'stat', 27, 'pendant', 'p_sos'],
+    ['Ring 1', 'armor', 150, 22, 'stat', 27, 'ring', 'r_gollux'],
+    ['Ring 2', 'armor', 160, 22, 'stat', 27, 'ring', 'r_gar'],
+    ['Ring 3', 'armor', 200, 22, 'stat', 27, 'ring', 'r_terror'],
+    ['Heart', 'armor', 200, 22, 'stat', 27, 'heart', 'ht_total'],
+].map(([slot, kind, level, stars, potType, pot, slotType, item]) => ({ slot, kind, level, stars, potType, pot, replace: 0, slotType, item, iconId: null }));
 
   // Calibration: reference DPS per point of HEXA-adjusted Scouter score.
   // Chosen so a ~170k-score character with mid HEXA progress solos Hard Seren in ~22 min.

@@ -3,8 +3,12 @@
   'use strict';
   const D = window.MSData;
   const C = window.MSCalc;
-  const LS_CUR = 'gmsScouter.current';
-  const LS_SAVED = 'gmsScouter.saved';
+  const I = window.MSItems;
+  const INC = window.MSIncome;
+  const LS_CUR = 'gmsScouter.current';   // legacy single character
+  const LS_SAVED = 'gmsScouter.saved';   // legacy saved list
+  const LS_ROSTER = 'gmsScouter.roster';
+  const LS_INCOME = 'gmsScouter.income';
   const LS_THEME = 'gmsScouter.theme';
 
   // ---------------------------------------------------------------------------
@@ -17,14 +21,57 @@
   function loadSaved() { try { return JSON.parse(store.get(LS_SAVED) || '{}'); } catch (e) { return {}; } }
   function writeSaved(m) { store.set(LS_SAVED, JSON.stringify(m)); }
 
-  let state = C.defaultState();
+  // ---------------------------------------------------------------------------
+  // Character roster: every character keeps its own stats, gear and settings.
+  // ---------------------------------------------------------------------------
+  const newId = () => 'c' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+  function loadRoster() {
+    try {
+      const r = JSON.parse(store.get(LS_ROSTER) || 'null');
+      if (r && r.chars && r.order && r.order.length) {
+        r.order = r.order.filter((id) => r.chars[id]);
+        if (r.order.length) { if (!r.chars[r.active]) r.active = r.order[0]; return r; }
+      }
+    } catch (e) { /* fall through to migration */ }
+    const r = { active: null, order: [], chars: {} };
+    const add = (st) => { const id = newId(); r.chars[id] = C.mergeState(st); r.order.push(id); return id; };
+    try { const cur = store.get(LS_CUR); if (cur) r.active = add(JSON.parse(cur)); } catch (e) { /* ignore */ }
+    try {
+      const saved = JSON.parse(store.get(LS_SAVED) || '{}');
+      for (const [name, st] of Object.entries(saved)) {
+        if (r.active && r.chars[r.active].name === name) { r.chars[r.active] = C.mergeState(st); continue; }
+        add(st);
+      }
+    } catch (e) { /* ignore */ }
+    if (!r.order.length) r.active = add(C.defaultState());
+    if (!r.active) r.active = r.order[0];
+    return r;
+  }
+  const roster = loadRoster();
+  let state = C.mergeState(roster.chars[roster.active]);
   try {
     const m = location.hash.match(/s=([^&]+)/);
-    if (m) state = C.decodeState(decodeURIComponent(m[1]));
-    else if (store.get(LS_CUR)) state = C.mergeState(JSON.parse(store.get(LS_CUR)));
-  } catch (e) { state = C.defaultState(); }
+    if (m) { // a shared character is added to the roster, never overwrites one
+      const shared = C.decodeState(decodeURIComponent(m[1]));
+      const id = newId();
+      roster.chars[id] = shared; roster.order.push(id); roster.active = id; state = shared;
+      try { history.replaceState(null, '', location.pathname + location.search); } catch (e) { /* ignore */ }
+    }
+  } catch (e) { /* ignore bad links */ }
+  function saveRoster() { roster.chars[roster.active] = state; store.set(LS_ROSTER, JSON.stringify(roster)); }
 
-  const ui = { tab: 'character', candFilter: 'all', hideTrivial: true, itemOld: {}, itemNew: {}, itemCost: 0, itemLabel: 'New item',
+  // Boss income lives outside characters (it covers the whole account).
+  function defaultIncome() {
+    return { mult: 1, prices: {}, groups: [
+      { name: 'Ctene mules', preset: 'ctene', count: 2, party: 1, bosses: INC.PRESETS.ctene.bosses.slice() },
+      { name: 'Hlom mules', preset: 'hlom', count: 6, party: 1, bosses: INC.PRESETS.hlom.bosses.slice() },
+    ] };
+  }
+  let income = defaultIncome();
+  try { const x = JSON.parse(store.get(LS_INCOME) || 'null'); if (x && x.groups) income = Object.assign(defaultIncome(), x); } catch (e) { /* ignore */ }
+  function saveIncome() { store.set(LS_INCOME, JSON.stringify(income)); }
+
+  const ui = { tab: 'character', incOpen: -1, gearOpen: -1, candFilter: 'all', hideTrivial: true, itemOld: {}, itemNew: {}, itemCost: 0, itemLabel: 'New item',
     sf: { level: 200, from: 17, to: 22, replace: 0 }, calibBoss: 'hseren', calibMin: 20, budget: null };
 
   // ---------------------------------------------------------------------------
@@ -91,7 +138,7 @@
     for (let i = 0; i < ks.length - 1; i++) { if (o[ks[i]] == null) o[ks[i]] = {}; o = o[ks[i]]; }
     o[ks[ks.length - 1]] = v;
   }
-  const ROOTS = { s: () => state, u: () => ui };
+  const ROOTS = { s: () => state, u: () => ui, i: () => income };
   function resolve(key) { const [r, ...rest] = key.split(':'); return [ROOTS[r](), rest.join(':')]; }
   function val(key) { const [o, p] = resolve(key); return getPath(o, p); }
 
@@ -319,7 +366,7 @@
         <div class="kpi"><div class="k">Next boss to unlock</div><div class="v" style="font-size:18px">${next ? esc(next.boss.name) : 'All clear!'}</div><div class="s">${next ? 'at ' + pct(next.pct, 0) + ' — need ' + sgnPct(1 / next.pct - 1, 0) + ' damage' : ''}</div></div>
         <div class="kpi"><div class="k">Est. stat window range</div><div class="v" style="font-size:20px">${big(range)}</div><div class="s">upper range estimate</div></div>
         <div class="kpi"><div class="k">Mu Lung (experimental)</div><div class="v">${dojo.floor}F</div><div class="s">see Mu Lung tab</div></div>`);
-      document.getElementById('headerScore').textContent = `${state.name || ''} · Score ${int(sc)}`;
+      document.getElementById('headerScore').textContent = `Score ${int(sc)}`;
 
       const shown = rows.filter((r) => !(ui.hideTrivial && r.pct > 10));
       out('bossTable', `<table><thead><tr><th>Boss</th><th>Lv</th><th>PDR</th><th>Force</th><th>Total HP</th><th class="l">Estimated %</th><th></th><th>Solo clear</th><th>Party</th><th>Status</th></tr></thead><tbody>
@@ -389,15 +436,6 @@
   TABS.upgrades = {
     render() {
       const st = 's:settings.';
-      const gearRows = state.gear.map((g, i) => `<tr>
-        <td class="l"><input data-k="s:gear.${i}.slot" data-t="str" value="${esc(g.slot)}" style="min-width:110px"></td>
-        <td>${sel(`s:gear.${i}.kind`, '', [['armor', 'Armor/Acc'], ['weapon', 'Weapon'], ['acc', 'No Star Force']])}</td>
-        <td><input data-k="s:gear.${i}.level" data-t="num" type="number" value="${g.level}" style="width:70px"></td>
-        <td><input data-k="s:gear.${i}.stars" data-t="num" type="number" min="0" max="30" value="${g.stars}" style="width:60px"></td>
-        <td>${sel(`s:gear.${i}.potType`, '', [['stat', 'Stat %'], ['att', 'ATT %']])}</td>
-        <td><input data-k="s:gear.${i}.pot" data-t="num" type="number" value="${g.pot}" style="width:60px"></td>
-        <td><input data-k="s:gear.${i}.replace" data-t="meso" type="text" inputmode="decimal" value="${esc(mesoText(g.replace))}" style="width:100px" title="Mesos to replace the item if it booms (e.g. 500M, 2B)"></td>
-        <td><button class="btn ghost small" data-act="gearDel" data-v="${i}">✕</button></td></tr>`).join('');
       return `
       <div class="grid g2">
         <div class="card">
@@ -420,12 +458,10 @@
           <p class="hint">Safeguard and Enhancement Mode per stage are set on the <b>Star Force</b> tab.</p>
         </div>
         <div class="card">
-          <h2>Gear sheet</h2>
-          <p class="hint">Stars and main-potential total for each item. These drive the Star Force and Potential suggestions.</p>
-          <div class="tablewrap" style="max-height:380px;overflow:auto"><table><thead><tr><th class="l">Slot</th><th>Type</th><th>Lv</th><th>★</th><th>Pot</th><th>Pot %</th><th>Boom replace</th><th></th></tr></thead>
-          <tbody>${gearRows}</tbody></table></div>
-          <div class="row" style="margin-top:8px"><button class="btn ghost small" data-act="gearAdd">+ Add item</button>
-            <button class="btn ghost small" data-act="gearReset">Reset to typical 22★ set</button></div>
+          <h2>Gear</h2>
+          <p class="hint">Star Force and Potential suggestions come from this character's gear. Edit items on the <b>Gear</b> tab.</p>
+          <div class="gear-strip">${state.gear.map((g) => `<span title="${esc(g.slot)} · ${g.stars}★ · ${g.pot}%">${I.iconHtml(gearView(g), 36)}<small>${g.stars}★</small></span>`).join('')}</div>
+          <div class="row" style="margin-top:10px"><button class="btn ghost small" data-act="goto" data-v="gear">Open Gear tab</button></div>
         </div>
       </div>
       <div class="card" style="margin-top:14px">
@@ -457,7 +493,7 @@
         const [slot, what] = c.label.includes(': ') ? [c.label.slice(0, c.label.indexOf(': ')), c.label.slice(c.label.indexOf(': ') + 2)] : ['', c.label];
         const key = [c.cat, what, Math.round(c.cost / 1e5), c.gain.toFixed(5)].join('|');
         const g = groups.get(key);
-        if (g) g.slots.push(slot); else groups.set(key, Object.assign({}, c, { what, slots: slot ? [slot] : [] }));
+        if (g) { g.slots.push(slot); if (c.gi != null) g.gis.push(c.gi); } else groups.set(key, Object.assign({}, c, { what, slots: slot ? [slot] : [], gis: c.gi != null ? [c.gi] : [] }));
       }
       const list = [...groups.values()].map((c) => Object.assign(c, {
         label: c.slots.length > 1 ? `${c.slots.length}× ${c.what} (${c.slots.join(', ')})` : c.label,
@@ -470,7 +506,8 @@
             const m = C.sfSimulate(c.sim.level, c.sim.from, c.sim.to, c.sim.opts, c.sim.replace, 600);
             dist = `${meso(m.p50)} / ${meso(m.p90)}`;
           }
-          return `<tr><td class="wrap" style="min-width:220px">${esc(c.label)}</td><td><span class="tag">${esc(c.cat)}</span></td><td>${meso(c.cost)}</td><td class="muted">${dist}</td>
+          const icons = (c.gis || (c.gi != null ? [c.gi] : [])).slice(0, 6).map((gi) => state.gear[gi] ? I.iconHtml(gearView(state.gear[gi]), 26) : '').join('');
+          return `<tr><td class="wrap" style="min-width:220px"><div class="cand">${icons ? `<span class="cand-icons">${icons}</span>` : ''}<span>${esc(c.label)}</span></div></td><td><span class="tag">${esc(c.cat)}</span></td><td>${meso(c.cost)}</td><td class="muted">${dist}</td>
             <td class="pos">${sgnPct(c.gain)}</td><td>${int(C.mainStatEquivalent(state, boss, c.gain))}</td><td><b>${sgnPct(c.eff, 3)}</b></td>
             <td class="l wrap">${c.unlocks.length ? '<span class="pos">' + esc(c.unlocks.slice(0, 2).join(', ')) + (c.unlocks.length > 2 ? '…' : '') + '</span>' : ''}</td>
             <td class="l wrap muted">${esc(c.note || '')}</td></tr>`;
@@ -697,32 +734,151 @@
   };
 
   // ---- Compare -------------------------------------------------------------
+  // ---- Gear ------------------------------------------------------------------
+  /** Gear entry with its slot type filled in (older saves don't have one). */
+  function gearView(g) { return Object.assign({}, g, { slotType: g.slotType || I.slotTypeOf(g.slot) }); }
+  TABS.gear = {
+    render() {
+      const cards = state.gear.map((raw, i) => {
+        const g = gearView(raw);
+        const slot = I.SLOTS[g.slotType] || I.SLOTS.ring;
+        const opts = [['', '(other / unlisted)']].concat(I.itemsForSlot(g.slotType).map((it) => [it.key, `${it.name} · Lv ${it.level}`]));
+        const it = g.item && I.ITEMS[g.item];
+        const open = ui.gearOpen === i;
+        return `<div class="gear-card">
+          <div class="gear-head">${I.iconHtml(g, 48)}<div class="gear-title"><b>${esc(it ? it.name : g.slot)}</b>
+            <span class="muted">${esc(g.slot)} · Lv ${g.level}</span>
+            <span class="stars">★ ${g.stars}</span></div></div>
+          <div class="form">
+            ${sel(`s:gear.${i}.item`, 'Item', opts)}
+            ${inp(`s:gear.${i}.stars`, 'Stars', { step: 1, min: 0, max: 30 })}
+            ${inp(`s:gear.${i}.pot`, `Potential ${g.potType === 'att' ? 'ATT' : 'stat'} %`, { step: 1, min: 0 })}
+          </div>
+          ${open ? `<div class="form" style="margin-top:8px">
+            ${inp(`s:gear.${i}.slot`, 'Slot label', { type: 'str' })}
+            ${sel(`s:gear.${i}.slotType`, 'Slot type', Object.entries(I.SLOTS).map(([k, v]) => [k, v.label]))}
+            ${inp(`s:gear.${i}.level`, 'Item level', { step: 1 })}
+            ${sel(`s:gear.${i}.kind`, 'Star Force', [['armor', 'Armor / accessory'], ['weapon', 'Weapon'], ['acc', 'No Star Force']])}
+            ${sel(`s:gear.${i}.potType`, 'Potential type', [['stat', 'Stat %'], ['att', 'ATT %']])}
+            ${mesoInp(`s:gear.${i}.replace`, 'Boom replacement')}
+            ${inp(`s:gear.${i}.iconId`, 'Icon item ID (optional)', { step: 1, title: 'Paste an item ID to use its in-game icon' })}
+          </div>` : ''}
+          <div class="row" style="margin-top:8px"><button class="btn ghost small" data-act="gearToggle" data-v="${i}">${open ? 'Less' : 'More'}</button>
+            <button class="btn ghost small" data-act="gearDel" data-v="${i}">Remove</button></div>
+        </div>`;
+      }).join('');
+      return `<div class="card"><h2>Gear · ${esc(state.name)}</h2>
+        <p class="hint">Each character keeps its own gear. Pick an item to fill in its level and icon, then set stars and potential.
+          These drive the Star Force and Potential suggestions on the Upgrades tab. Icons are the game's item art from maplestory.io;
+          armor shows the warrior version.</p>
+        <div class="row"><button class="btn ghost small" data-act="gearAdd">+ Add item</button>
+          <button class="btn ghost small" data-act="gearReset">Reset to typical 22★ set</button></div></div>
+        <div class="gear-grid" style="margin-top:14px">${cards}</div>
+        <div class="card" style="margin-top:14px"><h2>Summary</h2><div data-out="gearSummary"></div></div>`;
+    },
+    outputs() {
+      const g = state.gear;
+      const sf = g.filter((x) => x.kind !== 'acc');
+      const avg = sf.length ? sf.reduce((a, x) => a + (Number(x.stars) || 0), 0) / sf.length : 0;
+      const stat = g.filter((x) => x.potType === 'stat').reduce((a, x) => a + (Number(x.pot) || 0), 0);
+      const att = g.filter((x) => x.potType === 'att').reduce((a, x) => a + (Number(x.pot) || 0), 0);
+      out('gearSummary', `<div class="row"><span class="tag">${g.length} items</span><span class="tag">Average ${avg.toFixed(1)}★</span>
+        <span class="tag">${sf.filter((x) => x.stars >= 22).length} items at 22★+</span><span class="tag">Stat potential ${stat}%</span><span class="tag">WSE ATT ${att}%</span></div>`);
+    },
+  };
+
+  // ---- Boss income -----------------------------------------------------------
+  TABS.income = {
+    render() {
+      const presetOpts = Object.entries(INC.PRESETS).map(([k, p]) => [k, p.label]);
+      const rows = income.groups.map((g, gi) => `<tr>
+        <td class="l"><input data-k="i:groups.${gi}.name" data-t="str" value="${esc(g.name)}" style="min-width:140px"></td>
+        <td>${sel(`i:groups.${gi}.preset`, '', presetOpts)}</td>
+        <td><input data-k="i:groups.${gi}.count" data-t="num" type="number" min="0" step="1" value="${g.count}" style="width:64px"></td>
+        <td><input data-k="i:groups.${gi}.party" data-t="num" type="number" min="1" max="6" step="1" value="${g.party}" style="width:56px"></td>
+        <td data-out="incMule${gi}"></td><td data-out="incTotal${gi}"></td>
+        <td><button class="btn ghost small" data-act="incToggle" data-v="${gi}">${ui.incOpen === gi ? 'Close' : 'Bosses'}</button>
+          <button class="btn ghost small" data-act="incDel" data-v="${gi}">✕</button></td></tr>
+        ${ui.incOpen === gi ? `<tr><td colspan="7" class="l wrap"><div class="boss-pick">${INC.CRYSTALS.map((c) => `<label class="check">
+          <input type="checkbox" data-incboss="${gi}" value="${c.id}"${g.bosses.includes(c.id) ? ' checked' : ''}> ${esc(c.name)}
+          <span class="muted">${meso(INC.priceOf(c.id, income.prices, income.mult))}${c.freq === 'monthly' ? ' /mo' : ''}</span></label>`).join('')}</div>
+          <div data-out="incPick${gi}" class="hint"></div></td></tr>` : ''}`).join('');
+      return `<div class="kpis" data-out="incKpis"></div>
+      <div class="card"><h2>Mules</h2>
+        <p class="hint">Each row is a group of identical characters. A character sells its 14 most valuable weekly crystals, and the world sells at most 180.
+          Hard Black Mage is monthly, so it's spread over the month. Party clears split the crystal.</p>
+        <div class="chips" style="margin-bottom:10px">
+          ${Object.entries(INC.PRESETS).filter(([k]) => k !== 'custom').map(([k, p]) => `<button class="chip" data-act="incAdd" data-v="${k}">+ ${esc(p.label)}</button>`).join('')}
+          <button class="chip" data-act="incRoster">+ My saved characters (from boss estimates)</button>
+          <button class="chip" data-act="incReset">Reset</button>
+        </div>
+        <div class="tablewrap"><table><thead><tr><th class="l">Group</th><th>Preset</th><th>Count</th><th>Party</th><th>Per mule / week</th><th>Group / week</th><th></th></tr></thead>
+        <tbody>${rows}</tbody></table></div></div>
+      <div class="grid g2" style="margin-top:14px">
+        <div class="card"><h2>Crystal prices</h2>
+          <p class="hint">GMS prices from community lists (2026). They drift up to ±3% a week, so correct them from the in-game Collector.
+            ≈ marks prices I couldn't confirm.</p>
+          <div class="form" style="max-width:360px">${inp('i:mult', 'World price multiplier', { title: '1 for Interactive worlds. Set your Heroic multiplier if it differs.' })}</div>
+          <div class="tablewrap" style="max-height:420px;overflow:auto;margin-top:8px"><table><thead><tr><th class="l">Boss</th><th>Price</th><th></th></tr></thead><tbody>
+          ${INC.CRYSTALS.map((c) => `<tr><td class="l">${esc(c.name)}${c.approx ? ' <span class="tag approx">≈</span>' : ''}${c.freq === 'monthly' ? ' <span class="tag">monthly</span>' : ''}</td>
+            <td style="width:130px"><input data-k="i:prices.${c.id}" data-t="meso" type="text" inputmode="decimal" value="${esc(mesoText(income.prices[c.id] != null ? income.prices[c.id] : c.price))}"></td>
+            <td>${income.prices[c.id] != null ? `<button class="btn ghost small" data-act="incPriceReset" data-v="${c.id}">↺</button>` : ''}</td></tr>`).join('')}
+          </tbody></table></div></div>
+        <div class="card"><h2>Breakdown</h2><div data-out="incBreak"></div></div>
+      </div>`;
+    },
+    outputs() {
+      const r = INC.income(income.groups, { prices: income.prices, mult: Number(income.mult) || 1 });
+      out('incKpis', `<div class="kpi main"><div class="k">Weekly income</div><div class="v">${meso(r.weekly)}</div><div class="s">${r.rows.reduce((a, x) => a + x.n, 0)} characters</div></div>
+        <div class="kpi"><div class="k">Monthly</div><div class="v">${meso(r.monthly)}</div><div class="s">52 ÷ 12 weeks</div></div>
+        <div class="kpi"><div class="k">Yearly</div><div class="v">${meso(r.yearly)}</div><div class="s">at current prices</div></div>
+        <div class="kpi"><div class="k">Crystals sold</div><div class="v">${r.crystals} / ${INC.PER_WORLD}</div>
+          <div class="s">${r.poolSize > INC.PER_WORLD ? `<span class="neg">${r.poolSize - INC.PER_WORLD} over the world cap (−${meso(r.lostToCap)})</span>` : 'under the world cap'}</div></div>`);
+      r.rows.forEach((row, gi) => {
+        out('incMule' + gi, meso(row.perMule));
+        out('incTotal' + gi, `<b>${meso(row.total)}</b>${row.capped ? ' <span class="tag approx">capped</span>' : ''}`);
+        out('incPick' + gi, `Sold each week: ${row.normal.map((c) => esc(c.name)).join(', ') || 'nothing'}${row.hasMonthly ? ' · plus Hard Black Mage once a month' : ''}`);
+      });
+      const top = r.rows.filter((x) => x.n > 0);
+      out('incBreak', top.length ? `<table><thead><tr><th class="l">Group</th><th>Crystals</th><th>Share</th><th class="l">Top crystals</th></tr></thead><tbody>
+        ${top.map((x) => `<tr><td class="l">${esc(x.name)} ×${x.n}</td><td>${x.count}</td><td>${r.weekly > 0 ? pct(x.total / r.weekly, 0) : '—'}</td>
+          <td class="l wrap muted">${x.normal.slice(0, 4).map((c) => `${esc(c.name)} ${meso(c.value)}`).join(' · ')}</td></tr>`).join('')}
+        </tbody></table>` : '<p class="hint">Add a mule group to see income.</p>');
+    },
+  };
+
+  // ---- Characters ----------------------------------------------------------
   TABS.compare = {
     render() {
-      return `<div class="card"><h2>Saved characters</h2>
-        <p class="hint">Saved in this browser. Use <b>Share link</b> to send a character to someone else.</p>
-        <div class="row"><button class="btn" data-act="saveAs">Save current as "${esc(state.name)}"</button>
-          <button class="btn ghost" data-act="newChar">New blank character</button></div>
+      return `<div class="card"><h2>Characters</h2>
+        <p class="hint">Every character keeps its own stats, gear, familiars, HEXA and settings, saved automatically in this browser.
+          Switch characters from the header. Use <b>Share link</b> to send the open character to someone.</p>
+        <div class="row"><button class="btn" data-act="newChar">+ New character</button>
+          <button class="btn ghost" data-act="dupChar" data-v="${roster.active}">Duplicate "${esc(state.name)}"</button></div>
         <div class="tablewrap" data-out="savedTable" style="margin-top:12px"></div></div>
         <div class="card" style="margin-top:14px"><h2>Import / export</h2>
           <textarea id="ioBox" style="width:100%;min-height:120px;background:var(--panel2);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:8px;font-family:ui-monospace,monospace"></textarea>
-          <div class="row" style="margin-top:8px"><button class="btn ghost" data-act="export">Export current</button><button class="btn" data-act="import">Import</button></div></div>`;
+          <div class="row" style="margin-top:8px"><button class="btn ghost" data-act="export">Export current</button><button class="btn ghost" data-act="exportAll">Export all</button>
+            <button class="btn" data-act="import">Import as new character(s)</button></div></div>`;
     },
     outputs() {
-      const saved = loadSaved();
-      const names = Object.keys(saved);
       const boss = C.bossById(state, state.targetBoss);
-      const rowsFor = (name, s, isCur) => {
+      const rowsFor = (id) => {
+        const s = id === roster.active ? state : C.mergeState(roster.chars[id]);
         const S = C.effective(s);
-        const rows = C.bossTable(s);
-        const top = rows.filter((r) => r.pct >= 1).sort((a, b) => b.boss.hp - a.boss.hp)[0];
-        return `<tr><td class="l">${isCur ? '<b>Current</b>' : esc(name)}</td><td>${esc((D.CLASSES.find((c) => c.id === s.cls) || {}).name || '')}</td><td>${s.level}</td>
+        const top = C.bossTable(s).filter((r) => r.pct >= 1).sort((a, b) => b.boss.hp - a.boss.hp)[0];
+        const weapon = s.gear.find((g) => (g.slotType || I.slotTypeOf(g.slot)) === 'weapon');
+        const isCur = id === roster.active;
+        return `<tr${isCur ? ' class="cur"' : ''}><td class="l"><div class="cand">${weapon ? I.iconHtml(gearView(weapon), 28) : ''}<span>${isCur ? '<b>' + esc(s.name) + '</b> <span class="tag">open</span>' : esc(s.name)}</span></div></td>
+          <td>${esc((D.CLASSES.find((c) => c.id === s.cls) || {}).name || '')}</td><td>${s.level}</td>
           <td><b>${int(C.score(S))}</b></td><td>${int(C.hexaScore(s, S))}</td><td>${int(S.main)}</td><td>${int(S.att)}</td><td>${pct(S.db, 0)}</td><td>${pct(S.ied, 1)}</td>
           <td>${top ? esc(top.boss.name) : '—'}</td><td>${pct(C.bossEstimate(s, boss).pct, 0)}</td>
-          <td>${isCur ? '' : `<button class="btn ghost small" data-act="load" data-v="${esc(name)}">Load</button> <button class="btn ghost small" data-act="del" data-v="${esc(name)}">✕</button>`}</td></tr>`;
+          <td>${isCur ? '' : `<button class="btn ghost small" data-act="switchChar" data-v="${id}">Open</button>`}
+            <button class="btn ghost small" data-act="dupChar" data-v="${id}">Copy</button>
+            <button class="btn ghost small" data-act="delChar" data-v="${id}">✕</button></td></tr>`;
       };
       out('savedTable', `<table><thead><tr><th class="l">Name</th><th>Class</th><th>Lv</th><th>Score</th><th>HEXA</th><th>Main</th><th>ATT</th><th>Dmg+Boss</th><th>IED</th><th>Top solo boss</th><th>${esc(boss.name)}</th><th></th></tr></thead>
-        <tbody>${rowsFor('', state, true)}${names.map((n) => rowsFor(n, C.mergeState(saved[n]), false)).join('')}</tbody></table>`);
+        <tbody>${roster.order.map(rowsFor).join('')}</tbody></table>`);
     },
   };
 
@@ -802,6 +958,8 @@ DPS     = HEXA score × ring × force × level × class × calibration × k</div
         <tr><td class="l">무릉 예상 층수</td><td class="l">Mu Lung tab</td></tr>
         <tr><td class="l">도핑 (buff toggle)</td><td class="l">Character → Bossing buffs</td></tr>
         <tr><td class="l">랭킹 / 캐릭터 검색</td><td class="l">Saved &amp; Compare, share links</td></tr>
+        <tr><td class="l">Characters</td><td class="l">Header switcher; each character has its own gear and stats</td></tr>
+        <tr><td class="l">Boss income</td><td class="l">Boss Income tab: Hlom / Ctene / BM / Hseren mule presets</td></tr>
         <tr><td class="l">GMS extras</td><td class="l">Upgrade cost vs gain, budget planner, Star Force simulator, familiar optimizer</td></tr>
       </tbody></table></div></div>`;
     },
@@ -826,13 +984,37 @@ DPS     = HEXA score × ring × force × level × class × calibration × k</div
     cancelAnimationFrame(raf);
     raf = requestAnimationFrame(() => {
       try { TABS[ui.tab].outputs(); } catch (e) { console.error(e); }
+      I.hydrate(app);
       if (ui.tab !== 'scouter') {
         const sc = C.score(C.effective(state));
-        document.getElementById('headerScore').textContent = `${state.name || ''} · Score ${int(sc)}`;
+        document.getElementById('headerScore').textContent = `Score ${int(sc)}`;
       }
     });
   }
-  function persist() { store.set(LS_CUR, JSON.stringify(state)); }
+  function persist() { saveRoster(); renderCharSelect(); }
+  function renderCharSelect() {
+    const el = document.getElementById('charSelect');
+    if (!el) return;
+    el.innerHTML = roster.order.map((id) => {
+      const c = id === roster.active ? state : roster.chars[id];
+      const cls = (D.CLASSES.find((x) => x.id === c.cls) || {}).name || '';
+      return `<option value="${id}"${id === roster.active ? ' selected' : ''}>${esc(c.name || 'Unnamed')} · ${esc(cls)} ${c.level}</option>`;
+    }).join('');
+  }
+  function switchChar(id) {
+    if (!roster.chars[id]) return;
+    saveRoster();
+    roster.active = id;
+    state = C.mergeState(roster.chars[id]);
+    ui.budget = null;
+    saveRoster(); renderCharSelect(); renderTab();
+  }
+  function addChar(st, open) {
+    const id = newId();
+    roster.chars[id] = C.mergeState(st); roster.order.push(id);
+    if (open) switchChar(id); else { saveRoster(); renderCharSelect(); refresh(); }
+    return id;
+  }
   function toast(msg) {
     const t = document.getElementById('toast');
     t.textContent = msg; t.classList.add('show');
@@ -845,6 +1027,15 @@ DPS     = HEXA score × ring × force × level × class × calibration × k</div
   function onField(e) {
     const el = e.target;
     if (el.dataset.boss) return onBossField(el);
+    if (el.dataset.incboss != null) { // boss checkbox inside a mule group
+      const g = income.groups[+el.dataset.incboss];
+      g.bosses = g.bosses.filter((b) => b !== el.value);
+      if (el.checked) g.bosses.push(el.value);
+      g.preset = 'custom';
+      const ps = app.querySelector(`select[data-k="i:groups.${el.dataset.incboss}.preset"]`);
+      if (ps) ps.value = 'custom';
+      saveIncome(); refresh(); return;
+    }
     const key = el.dataset.k;
     if (!key) return;
     const t = el.dataset.t;
@@ -856,6 +1047,7 @@ DPS     = HEXA score × ring × force × level × class × calibration × k</div
       setPath(mo, mp, m);
       if (e.type === 'change') el.value = mesoText(m);
       if (mo === state) persist();
+      if (mo === income) saveIncome();
       refresh();
       return;
     }
@@ -875,6 +1067,26 @@ DPS     = HEXA score × ring × force × level × class × calibration × k</div
       persist(); renderTab(); return;
     }
     if (p === 'cls' && e.type === 'change') { persist(); renderTab(); return; }
+    // picking a catalog item fills in level, slot type and Star Force kind
+    const gm = p.match(/^gear\.(\d+)\.(item|slotType)$/);
+    if (gm && o === state && e.type === 'change') {
+      const g = state.gear[+gm[1]];
+      if (gm[2] === 'item' && v && I.ITEMS[v]) {
+        const it = I.ITEMS[v];
+        g.level = it.level; g.slotType = it.slot; g.iconId = null;
+        g.kind = I.SLOTS[it.slot].kind; g.potType = I.SLOTS[it.slot].pot;
+        if (g.stars > C.sfMaxStars(g.level)) g.stars = C.sfMaxStars(g.level);
+      }
+      if (gm[2] === 'slotType') { g.item = null; g.kind = I.SLOTS[v].kind; g.potType = I.SLOTS[v].pot; }
+      persist(); renderTab(); return;
+    }
+    if (o === income && e.type === 'change' && /^groups\.\d+\.preset$/.test(p)) {
+      const g = income.groups[+p.split('.')[1]];
+      if (v !== 'custom') g.bosses = INC.PRESETS[v].bosses.slice();
+      saveIncome(); renderTab(); return;
+    }
+    if (o === income) saveIncome();
+    if (p === 'name' && o === state) renderCharSelect();
     if (p === 'settings.cube' && e.type === 'change') { state.settings.cubeCost = D.CUBES[v].cost; persist(); renderTab(); return; }
     if (o === state) persist();
     refresh();
@@ -901,7 +1113,27 @@ DPS     = HEXA score × ring × force × level × class × calibration × k</div
     },
     resetCalib() { state.calib = 1; state.calibNote = ''; persist(); renderTab(); },
     candFilter(v) { ui.candFilter = v; refresh(); },
-    gearAdd() { state.gear.push({ slot: 'New item', kind: 'armor', level: 200, stars: 17, potType: 'stat', pot: 21, replace: 0 }); persist(); renderTab(); },
+    gearAdd() { state.gear.push({ slot: 'Ring', slotType: 'ring', item: null, iconId: null, kind: 'armor', level: 200, stars: 17, potType: 'stat', pot: 21, replace: 0 }); ui.gearOpen = state.gear.length - 1; persist(); renderTab(); },
+    gearToggle(v) { ui.gearOpen = ui.gearOpen === +v ? -1 : +v; renderTab(); },
+    goto(v) { ui.tab = v; renderTab(); },
+    incAdd(v) { income.groups.push({ name: INC.PRESETS[v].label, preset: v, count: 1, party: 1, bosses: INC.PRESETS[v].bosses.slice() }); saveIncome(); renderTab(); },
+    incDel(v) { income.groups.splice(+v, 1); ui.incOpen = -1; saveIncome(); renderTab(); },
+    incToggle(v) { ui.incOpen = ui.incOpen === +v ? -1 : +v; renderTab(); },
+    incReset() { income = defaultIncome(); ui.incOpen = -1; saveIncome(); renderTab(); },
+    incPriceReset(v) { delete income.prices[v]; saveIncome(); renderTab(); },
+    incRoster() {
+      // one group per saved character, using the bosses it can solo (pre-Arcane bosses if it solos Hard Magnus)
+      saveRoster();
+      for (const id of roster.order) {
+        const s = C.mergeState(roster.chars[id]);
+        const can = (bid) => C.bossEstimate(s, C.bossById(s, bid)).pct >= 1;
+        const known = new Set(C.bossList(s).map((b) => b.id));
+        const pre = can('hmag');
+        const bosses = INC.CRYSTALS.filter((c) => (known.has(c.id) ? can(c.id) : pre)).map((c) => c.id);
+        income.groups.push({ name: s.name || 'Character', preset: 'custom', count: 1, party: 1, bosses });
+      }
+      saveIncome(); renderTab(); toast('Added your characters');
+    },
     gearDel(v) { state.gear.splice(+v, 1); persist(); renderTab(); },
     gearReset() { state.gear = C.clone(D.GEAR_DEFAULT); persist(); renderTab(); },
     plan() {
@@ -929,14 +1161,31 @@ DPS     = HEXA score × ring × force × level × class × calibration × k</div
     itemApply() { state = C.bakeDelta(state, itemDelta(ui.itemOld, ui.itemNew)); ui.itemOld = {}; ui.itemNew = {}; persist(); renderTab(); toast('Applied to stats'); },
     itemClear() { ui.itemOld = {}; ui.itemNew = {}; renderTab(); },
     customDel(v) { state.custom.splice(+v, 1); persist(); refresh(); },
-    saveAs() { const m = loadSaved(); m[state.name || 'Unnamed'] = state; writeSaved(m); refresh(); toast('Saved'); },
-    newChar() { state = C.defaultState(); state.name = 'New Character'; persist(); renderTab(); },
-    load(v) { const m = loadSaved(); if (m[v]) { state = C.mergeState(m[v]); persist(); renderTab(); toast('Loaded ' + v); } },
-    del(v) { const m = loadSaved(); delete m[v]; writeSaved(m); refresh(); },
+    newChar() { const s = C.defaultState(); s.name = 'Character ' + (roster.order.length + 1); addChar(s, true); toast('New character'); },
+    dupChar(v) {
+      const src = v === roster.active ? state : roster.chars[v];
+      const s = C.clone(src); s.name = (src.name || 'Character') + ' (copy)';
+      addChar(s, false); toast('Copied');
+    },
+    switchChar(v) { switchChar(v); },
+    delChar(v) {
+      if (roster.order.length <= 1) { toast('You need at least one character'); return; }
+      const name = (v === roster.active ? state : roster.chars[v]).name;
+      if (!confirm(`Delete "${name}"? This can't be undone.`)) return;
+      roster.order = roster.order.filter((id) => id !== v);
+      delete roster.chars[v];
+      if (roster.active === v) { roster.active = roster.order[0]; state = C.mergeState(roster.chars[roster.active]); }
+      saveRoster(); renderCharSelect(); renderTab();
+    },
     export() { document.getElementById('ioBox').value = JSON.stringify(state, null, 1); },
+    exportAll() { saveRoster(); document.getElementById('ioBox').value = JSON.stringify(roster.order.map((id) => roster.chars[id]), null, 1); },
     import() {
-      try { state = C.mergeState(JSON.parse(document.getElementById('ioBox').value)); persist(); renderTab(); toast('Imported'); }
-      catch (e) { toast('Invalid JSON'); }
+      try {
+        const data = JSON.parse(document.getElementById('ioBox').value);
+        const list = Array.isArray(data) ? data : [data];
+        list.forEach((x, k) => addChar(x, k === list.length - 1));
+        toast(`Imported ${list.length} character${list.length > 1 ? 's' : ''}`);
+      } catch (e) { toast('Invalid JSON'); }
     },
     sfAuto() {
       const lv = Number(ui.sf.level) || 200, f = Math.max(0, Number(ui.sf.from) || 0), t = Math.min(C.sfMaxStars(lv), Number(ui.sf.to) || 0);
@@ -975,13 +1224,25 @@ DPS     = HEXA score × ring × force × level × class × calibration × k</div
     if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(url).then(done, () => { prompt('Copy this link:', url); });
     else prompt('Copy this link:', url);
   });
-  document.getElementById('btnSave').addEventListener('click', () => ACTIONS.saveAs());
-  function applyTheme(t) { if (t) document.documentElement.dataset.theme = t; else delete document.documentElement.dataset.theme; }
+  document.getElementById('charSelect').addEventListener('change', (e) => switchChar(e.target.value));
+  document.getElementById('btnNewChar').addEventListener('click', () => ACTIONS.newChar());
+  // Theme: follows the system until the person picks Light or Dark.
+  const themeBtn = document.getElementById('btnTheme');
+  const systemDark = () => !(window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches);
+  function currentTheme() { return document.documentElement.dataset.theme || (systemDark() ? 'dark' : 'light'); }
+  function applyTheme(t) {
+    if (t) document.documentElement.dataset.theme = t; else delete document.documentElement.dataset.theme;
+    const dark = currentTheme() === 'dark';
+    themeBtn.textContent = dark ? '☀ Light' : '☾ Dark';
+    themeBtn.title = dark ? 'Switch to light mode' : 'Switch to dark mode';
+  }
   applyTheme(store.get(LS_THEME));
-  document.getElementById('btnTheme').addEventListener('click', () => {
-    const cur = document.documentElement.dataset.theme === 'light' ? 'dark' : 'light';
-    applyTheme(cur); store.set(LS_THEME, cur);
+  themeBtn.addEventListener('click', () => {
+    const next = currentTheme() === 'dark' ? 'light' : 'dark';
+    applyTheme(next); store.set(LS_THEME, next);
   });
+  saveRoster();
+  renderCharSelect();
 
   renderTab();
 })();

@@ -856,7 +856,7 @@
           out.push({
             cat: 'Star Force', label: `${item.slot}: ${cur}★ → ${g}★`, cost: e.cost, delta: sfDelta(item, cur, g),
             note: `~${e.attempts.toFixed(1)} taps, ${e.booms.toFixed(2)} expected booms`, booms: e.booms,
-            sim: { level: item.level, from: cur, to: g, opts: sfOpts, replace: Number(item.replace) || 0 },
+            sim: { level: item.level, from: cur, to: g, opts: sfOpts, replace: Number(item.replace) || 0 }, gi,
             apply: (s) => { s.gear[gi].stars = g; },
           });
         }
@@ -872,7 +872,7 @@
         out.push({
           cat: 'Potential', label: `${item.slot}: ${curPot}% → ${tg}% ${item.potType === 'att' ? 'ATT' : 'stat'}`,
           cost: rolls * (Number(st.cubeCost) || 0), delta: d,
-          note: `${(p * 100).toFixed(2)}% per ${D.CUBES[st.cube].label}; ~${Math.round(rolls)} avg, ${rollsForChance(p, 0.9)} for 90%`,
+          note: `${(p * 100).toFixed(2)}% per ${D.CUBES[st.cube].label}; ~${Math.round(rolls)} avg, ${rollsForChance(p, 0.9)} for 90%`, gi,
           apply: (s) => { s.gear[gi].pot = tg; },
         });
       }

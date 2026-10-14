@@ -4,7 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>GMS Scouter</title>
-  <meta name="description" content="MapleScouter-style spec calculator for GMS: Scouter score, boss clear estimates, stat efficiency, upgrade cost vs gain, familiar, hyper stat, legion and HEXA optimizers.">
+  <meta name="description" content="MapleScouter-style spec calculator for GMS: Scouter score, boss clear estimates, stat efficiency, upgrade cost vs gain, gear with item icons, boss income for mules, and familiar, hyper stat, legion and HEXA optimizers.">
+  <meta name="color-scheme" content="dark light">
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -16,17 +17,22 @@
         <div class="subtitle">Spec score · Boss cut · Upgrade planner</div>
       </div>
     </div>
+    <div class="char-switch">
+      <label for="charSelect" class="muted">Character</label>
+      <select id="charSelect" aria-label="Character"></select>
+      <button class="btn ghost small" id="btnNewChar" title="Create a new character">+ New</button>
+    </div>
     <div class="score-pill" id="headerScore"></div>
     <div class="top-actions">
       <button class="btn ghost" id="btnShare" title="Copy a link containing this character">Share link</button>
-      <button class="btn ghost" id="btnSave" title="Save to this browser">Save</button>
-      <button class="btn ghost" id="btnTheme" title="Toggle light / dark">◐</button>
+      <button class="btn ghost" id="btnTheme" title="Switch theme">☀ Light</button>
     </div>
   </header>
 
   <nav class="tabs" id="tabs">
     <button data-tab="character" class="active">Character</button>
     <button data-tab="scouter">Scouter &amp; Bosses</button>
+    <button data-tab="gear">Gear</button>
     <button data-tab="efficiency">Efficiency</button>
     <button data-tab="upgrades">Upgrades</button>
     <button data-tab="optimize">Optimize</button>
@@ -34,7 +40,8 @@
     <button data-tab="itemmaker">Item Maker</button>
     <button data-tab="starforce">Star Force</button>
     <button data-tab="dojo">Mu Lung</button>
-    <button data-tab="compare">Saved &amp; Compare</button>
+    <button data-tab="income">Boss Income</button>
+    <button data-tab="compare">Characters</button>
     <button data-tab="data">Data</button>
     <button data-tab="about">Guide</button>
   </nav>
@@ -50,6 +57,8 @@
 
   <script src="js/data.js"></script>
   <script src="js/calc.js"></script>
+  <script src="js/items.js"></script>
+  <script src="js/income.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>

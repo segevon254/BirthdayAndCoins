@@ -20,6 +20,11 @@ A MapleScouter-style spec calculator, adapted for **GMS**. It's a static site wi
 
 GMS-specific additions:
 
+- **Multiple characters.** Switch characters from the header. Each one keeps its own stats, gear, familiars, HEXA and settings, saved in the browser.
+- **Gear tab with item pictures.** A catalog of widely used items (Arcane, Absolab, Eternal, CRA, Tyrant, Gollux, Pitched Boss, Dawn and more). Icons are the game's item art from maplestory.io, looked up by name, and you can paste an item ID for anything else.
+- **Boss income.** Mule groups with Hlom (Hard Lotus), Ctene (Chaos Tenebris), BM and Hard Seren presets, or your saved characters' estimated clears. It applies the 14-per-character and 180-per-world crystal limits, spreads monthly Black Mage over the month, and has editable crystal prices.
+- **Light and dark themes.** Follows your system until you pick one. Font is Helvetica.
+
 - **Familiars**: quick builder with presets, tier-based auto values, the 120% familiar Boss cap, badges, and reroll suggestions with expected cost.
 - **Upgrades: cost vs gain**: Star Force (exact Markov expectation plus Monte-Carlo median and p90, events, safeguard, MVP), Potential (cube line odds), Familiars, HEXA, Hyper, Legion, symbols and custom items. Each is ranked by damage gain per 1B mesos, with the bosses it unlocks.
 - **Budget planner**: a greedy upgrade path for a given meso budget.

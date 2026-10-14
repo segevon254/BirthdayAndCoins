@@ -12,6 +12,8 @@
   --bad: #ff6b6b;
   --party: #b48cff;
   --radius: 10px;
+  --font: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  color-scheme: dark;
 }
 :root[data-theme="light"] {
   --bg: #f3f4f7;
@@ -26,9 +28,27 @@
   --warn: #b98900;
   --bad: #d64545;
   --party: #7a4fd6;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    --bg: #f3f4f7;
+    --panel: #ffffff;
+    --panel2: #f7f8fb;
+    --line: #dde1e8;
+    --text: #1c2230;
+    --muted: #667085;
+    --accent: #d9820b;
+    --accent2: #2f6fd6;
+    --good: #16a36a;
+    --warn: #b98900;
+    --bad: #d64545;
+    --party: #7a4fd6;
+    color-scheme: light;
+  }
 }
 * { box-sizing: border-box; }
-html, body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+html, body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.45 var(--font); }
 a { color: var(--accent2); }
 
 .topbar { display: flex; align-items: center; gap: 16px; padding: 12px 20px; background: var(--panel); border-bottom: 1px solid var(--line); position: sticky; top: 0; z-index: 10; flex-wrap: wrap; }
@@ -127,4 +147,35 @@ td .field { min-width: 110px; }
   .g2, .g3 { grid-template-columns: 1fr; }
   .kpi .v { font-size: 22px; }
   .score-pill { margin-left: 0; }
+}
+
+/* character switcher */
+.char-switch { display: flex; align-items: center; gap: 6px; margin-left: 12px; }
+.char-switch label { font-size: 12px; }
+.char-switch select { width: auto; max-width: 260px; }
+tr.cur td { background: var(--panel2); }
+
+/* item icons */
+.icon { position: relative; display: inline-flex; align-items: center; justify-content: center; flex: none;
+  background: var(--panel2); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.icon img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; image-rendering: pixelated; padding: 3px; z-index: 1; }
+.icon img.ok { background: var(--panel2); } /* covers the glyph only once the picture has loaded */
+.icon .glyph { color: var(--muted); font-size: 18px; line-height: 1; }
+.cand { display: flex; align-items: center; gap: 8px; }
+.cand-icons { display: inline-flex; gap: 2px; flex: none; }
+.gear-strip { display: flex; flex-wrap: wrap; gap: 6px; }
+.gear-strip > span { display: inline-flex; flex-direction: column; align-items: center; gap: 2px; font-size: 11px; color: var(--muted); }
+.gear-grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(270px, 1fr)); }
+.gear-card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px; min-width: 0; }
+.gear-card .form { grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); }
+.gear-head { display: flex; gap: 10px; align-items: center; margin-bottom: 10px; }
+.gear-title { display: flex; flex-direction: column; min-width: 0; }
+.gear-title b { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.gear-title .muted { font-size: 12px; }
+.stars { color: var(--accent); font-size: 12px; font-weight: 700; white-space: nowrap; }
+.boss-pick { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 4px 12px; padding: 6px 0; }
+.boss-pick .muted { font-size: 11px; }
+@media (max-width: 640px) {
+  .char-switch { margin-left: 0; width: 100%; }
+  .char-switch select { flex: 1; max-width: none; }
 }
