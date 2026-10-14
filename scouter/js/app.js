@@ -43,6 +43,32 @@
     if (a >= 1e4) return (n / 1e3).toFixed(1) + 'K';
     return Math.round(n).toLocaleString('en-US');
   }
+  /** Mesos are always shown in millions or billions: 22M, 1.5B, 417.22B. */
+  function meso(n, d) {
+    if (!isFinite(n)) return '∞';
+    if (!n) return '0';
+    const a = Math.abs(n);
+    if (a >= 1e9) return (n / 1e9).toLocaleString('en-US', { maximumFractionDigits: d == null ? 2 : d }) + 'B';
+    return (n / 1e6).toLocaleString('en-US', { maximumFractionDigits: d == null ? 2 : d }) + 'M';
+  }
+  /** Input text for a meso value: 22M, 1.5B, or 0. */
+  function mesoText(n) {
+    n = Number(n) || 0;
+    if (!n) return '0';
+    const trim = (x) => String(+x.toFixed(4));
+    return Math.abs(n) >= 1e9 ? trim(n / 1e9) + 'B' : trim(n / 1e6) + 'M';
+  }
+  /** Parse "22M", "1.5b", "500k", "22,000,000" or a bare number (read as millions). */
+  function parseMeso(str) {
+    const m = String(str).trim().replace(/,/g, '').match(/^(-?\d*\.?\d+)\s*([kmb]?)$/i);
+    if (!m) return null;
+    const v = Number(m[1]);
+    const unit = m[2].toLowerCase();
+    if (unit === 'k') return v * 1e3;
+    if (unit === 'b') return v * 1e9;
+    if (unit === 'm') return v * 1e6;
+    return v >= 1e6 ? v : v * 1e6; // full meso amounts pass through; small bare numbers are millions
+  }
   const pct = (x, d) => (isFinite(x) ? (x * 100).toFixed(d == null ? 1 : d) + '%' : '∞');
   const sgnPct = (x, d) => (x >= 0 ? '+' : '') + pct(x, d == null ? 2 : d);
   function dur(sec) {
@@ -75,6 +101,11 @@
     return `<div class="field"${o.title ? ` title="${esc(o.title)}"` : ''}><label>${esc(label)}${o.approx ? ' <span class="tag approx">approx</span>' : ''}</label>
       <input data-k="${key}" data-t="${o.type || 'num'}" type="${o.type === 'str' ? 'text' : 'number'}" value="${esc(v == null ? '' : v)}"
       ${o.step ? `step="${o.step}"` : 'step="any"'} ${o.min != null ? `min="${o.min}"` : ''} ${o.max != null ? `max="${o.max}"` : ''}></div>`;
+  }
+  function mesoInp(key, label, o) {
+    o = o || {};
+    return `<div class="field"${o.title ? ` title="${esc(o.title)}"` : ''}><label>${esc(label)}${o.approx ? ' <span class="tag approx">approx</span>' : ''}</label>
+      <input data-k="${key}" data-t="meso" type="text" inputmode="decimal" placeholder="e.g. 22M or 1.5B" value="${esc(mesoText(val(key)))}"></div>`;
   }
   function sel(key, label, options, o) {
     o = o || {};
@@ -365,21 +396,22 @@
         <td><input data-k="s:gear.${i}.stars" data-t="num" type="number" min="0" max="30" value="${g.stars}" style="width:60px"></td>
         <td>${sel(`s:gear.${i}.potType`, '', [['stat', 'Stat %'], ['att', 'ATT %']])}</td>
         <td><input data-k="s:gear.${i}.pot" data-t="num" type="number" value="${g.pot}" style="width:60px"></td>
-        <td><input data-k="s:gear.${i}.replace" data-t="num" type="number" value="${g.replace}" style="width:120px" title="Mesos to replace the item if it booms"></td>
+        <td><input data-k="s:gear.${i}.replace" data-t="meso" type="text" inputmode="decimal" value="${esc(mesoText(g.replace))}" style="width:100px" title="Mesos to replace the item if it booms (e.g. 500M, 2B)"></td>
         <td><button class="btn ghost small" data-act="gearDel" data-v="${i}">✕</button></td></tr>`).join('');
       return `
       <div class="grid g2">
         <div class="card">
           <h2>Upgrade settings</h2>
+          <p class="hint">Mesos are in millions or billions: type <b>22M</b>, <b>1.5B</b> or <b>500K</b>. A plain number counts as millions.</p>
           <div class="form">
             ${sel('s:targetBoss', 'Rank by damage vs', bossOptions())}
             ${sel(st + 'cube', 'Potential reroll', Object.entries(D.CUBES).map(([k, c]) => [k, c.label]))}
-            ${inp(st + 'cubeCost', 'Mesos per reroll', { approx: true, title: 'Cube price or meso reset cost on your server' })}
+            ${mesoInp(st + 'cubeCost', 'Mesos per reroll', { approx: true, title: 'Cube price or meso reset cost on your server' })}
             ${sel(st + 'mvp', 'MVP discount (<17★)', [['none', 'None'], ['silver', 'Silver 3%'], ['gold', 'Gold 5%'], ['diamond', 'Diamond+ 10%']])}
-            ${inp(st + 'famRerollCost', 'Mesos per familiar reroll (Red Familiar Card)', { title: 'Odds come from community samples; the card price is up to your server' })}
-            ${inp(st + 'fragPrice', 'Mesos per Sol Erda fragment (0 = time-gated)')}
-            ${inp(st + 'symbolCost', 'Mesos per authentic symbol level (0 = time-gated)')}
-            ${inp(st + 'hyperResetCost', 'Hyper stat reset fee')}
+            ${mesoInp(st + 'famRerollCost', 'Mesos per familiar reroll (Red Familiar Card)', { title: 'Odds come from community samples; the card price is up to your server' })}
+            ${mesoInp(st + 'fragPrice', 'Mesos per Sol Erda fragment (0 = time-gated)')}
+            ${mesoInp(st + 'symbolCost', 'Mesos per authentic symbol level (0 = time-gated)')}
+            ${mesoInp(st + 'hyperResetCost', 'Hyper stat reset fee')}
           </div>
           <div class="row" style="margin-top:10px">
             ${chk(st + 'starCatch', 'Star catching (+5%)')} ${chk(st + 'sfEvent30', '30% off event')} ${chk(st + 'sfBoomReduce', '-30% boom event (<21★)')}
@@ -406,7 +438,7 @@
         <div class="card">
           <h2>Budget planner</h2>
           <p class="hint">Greedy plan: keeps buying the upgrade with the best gain per meso and re-checks after every purchase.</p>
-          <div class="form" style="max-width:360px">${inp('s:settings.budget', 'Budget (mesos)')}</div>
+          <div class="form" style="max-width:360px">${mesoInp('s:settings.budget', 'Budget')}</div>
           <div class="row" style="margin-top:8px"><button class="btn" data-act="plan">Build plan</button></div>
           <div class="tablewrap" data-out="planTable" style="margin-top:10px"></div>
         </div>
@@ -436,9 +468,9 @@
           let dist = '—';
           if (c.sim && simBudget-- > 0) {
             const m = C.sfSimulate(c.sim.level, c.sim.from, c.sim.to, c.sim.opts, c.sim.replace, 600);
-            dist = `${big(m.p50)} / ${big(m.p90)}`;
+            dist = `${meso(m.p50)} / ${meso(m.p90)}`;
           }
-          return `<tr><td class="wrap" style="min-width:220px">${esc(c.label)}</td><td><span class="tag">${esc(c.cat)}</span></td><td>${big(c.cost)}</td><td class="muted">${dist}</td>
+          return `<tr><td class="wrap" style="min-width:220px">${esc(c.label)}</td><td><span class="tag">${esc(c.cat)}</span></td><td>${meso(c.cost)}</td><td class="muted">${dist}</td>
             <td class="pos">${sgnPct(c.gain)}</td><td>${int(C.mainStatEquivalent(state, boss, c.gain))}</td><td><b>${sgnPct(c.eff, 3)}</b></td>
             <td class="l wrap">${c.unlocks.length ? '<span class="pos">' + esc(c.unlocks.slice(0, 2).join(', ')) + (c.unlocks.length > 2 ? '…' : '') + '</span>' : ''}</td>
             <td class="l wrap muted">${esc(c.note || '')}</td></tr>`;
@@ -449,8 +481,8 @@
       if (ui.budget) {
         const p = ui.budget;
         out('planTable', p.steps.length ? `<table><thead><tr><th>#</th><th>Upgrade</th><th>Cost</th><th>Gain</th><th>Total gain</th></tr></thead><tbody>
-          ${p.steps.map((s, i) => `<tr><td>${i + 1}</td><td class="l wrap">${esc(s.label)}</td><td>${big(s.cost)}</td><td class="pos">${sgnPct(s.gain)}</td><td>${sgnPct(s.cumGain)}</td></tr>`).join('')}
-          <tr><td></td><td class="l"><b>Total</b></td><td><b>${big(p.spent)}</b></td><td></td><td class="pos"><b>${sgnPct(p.gain)}</b></td></tr></tbody></table>
+          ${p.steps.map((s, i) => `<tr><td>${i + 1}</td><td class="l wrap">${esc(s.label)}</td><td>${meso(s.cost)}</td><td class="pos">${sgnPct(s.gain)}</td><td>${sgnPct(s.cumGain)}</td></tr>`).join('')}
+          <tr><td></td><td class="l"><b>Total</b></td><td><b>${meso(p.spent)}</b></td><td></td><td class="pos"><b>${sgnPct(p.gain)}</b></td></tr></tbody></table>
           <p class="hint">Target boss after plan: <b>${pct(C.bossEstimate(p.finalState, boss).pct, 0)}</b> (now ${pct(C.bossEstimate(state, boss).pct, 0)}).</p>`
           : '<p class="hint">Nothing affordable in this budget.</p>');
       } else out('planTable', '');
@@ -488,7 +520,7 @@
       out('famOpt', `<p class="hint">Familiar boss now: ${pct(Math.min(rawBoss, D.FAMILIAR_BOSS_CAP), 0)} of the 120% cap. Once you hit the cap, put the remaining lines into IED.</p>
         <table><thead><tr><th>Change</th><th>Gain</th><th>= main stat</th><th>Expected rerolls</th><th>Expected cost</th></tr></thead><tbody>
         ${fo.map((f) => `<tr><td class="wrap">${esc(f.label)}${f.capped ? ' <span class="tag approx">over cap</span>' : ''}</td><td class="${f.gain > 0 ? 'pos' : 'muted'}">${sgnPct(f.gain)}</td>
-          <td>${int(C.mainStatEquivalent(state, boss, f.gain))}</td><td>${int(f.rerolls)}</td><td>${big(f.cost)}</td></tr>`).join('')}
+          <td>${int(C.mainStatEquivalent(state, boss, f.gain))}</td><td>${int(f.rerolls)}</td><td>${meso(f.cost)}</td></tr>`).join('')}
         </tbody></table>`);
     },
   };
@@ -558,7 +590,7 @@
       <div class="grid g2" style="margin-top:14px">
         <div class="card"><h2>Result</h2><div data-out="itemResult"></div></div>
         <div class="card"><h2>Add to upgrade list</h2>
-          <div class="form">${inp('u:itemLabel', 'Label', { type: 'str' })}${inp('u:itemCost', 'Cost (mesos)')}</div>
+          <div class="form">${inp('u:itemLabel', 'Label', { type: 'str' })}${mesoInp('u:itemCost', 'Cost')}</div>
           <div class="row" style="margin-top:10px"><button class="btn" data-act="itemAdd">Add as custom upgrade</button><button class="btn ghost" data-act="itemApply">Apply to my stats</button>
             <button class="btn ghost" data-act="itemClear">Clear</button></div>
           <div data-out="customList" style="margin-top:10px"></div>
@@ -580,7 +612,7 @@
           const b = before.find((x) => x.boss.id === r.boss.id);
           return `<tr><td>${esc(r.boss.name)}</td><td class="st-${b.status}">${pct(b.pct, 0)} ${STATUS_LABEL[b.status]}</td><td class="st-${r.status}">${pct(r.pct, 0)} ${STATUS_LABEL[r.status]}</td></tr>`;
         }).join('')}</tbody></table>` : '<p class="hint">No boss changes status.</p>'}`);
-      out('customList', (state.custom || []).length ? `<table><tbody>${state.custom.map((c, i) => `<tr><td class="l">${esc(c.label)}</td><td>${big(c.cost)}</td>
+      out('customList', (state.custom || []).length ? `<table><tbody>${state.custom.map((c, i) => `<tr><td class="l">${esc(c.label)}</td><td>${meso(c.cost)}</td>
         <td><button class="btn ghost small" data-act="customDel" data-v="${i}">✕</button></td></tr>`).join('')}</tbody></table>` : '<p class="hint">No custom upgrades yet.</p>');
     },
   };
@@ -596,7 +628,7 @@
         <div class="card"><h2>Star Force calculator <span class="tag">GMS v.264+ system · v.269 modes</span></h2>
           <div class="form">
             ${inp('u:sf.level', 'Item level', { step: 1 })}${inp('u:sf.from', 'Current ★', { step: 1, min: 0, max: 29 })}
-            ${inp('u:sf.to', 'Target ★', { step: 1, min: 1, max: 30 })}${inp('u:sf.replace', 'Mesos per boom (spare item / trace restore)')}
+            ${inp('u:sf.to', 'Target ★', { step: 1, min: 1, max: 30 })}${mesoInp('u:sf.replace', 'Mesos per boom (spare item / trace restore)')}
             ${sel(st + 'mvp', 'MVP discount (<17★)', [['none', 'None'], ['silver', 'Silver 3%'], ['gold', 'Gold 5%'], ['diamond', 'Diamond+ 10%']])}
             ${restoreSel(st + 'keepOnBoom')}
           </div>
@@ -631,19 +663,19 @@
       const m = C.sfSimulate(lv, f, t, o, rep, 2000);
       const base = C.sfExpected(lv, f, t, Object.assign({}, o, { plan: {} }), rep);
       out('sfSummary', `<div class="kpis" style="margin:0">
-        <div class="kpi main"><div class="k">Expected cost</div><div class="v">${big(e.cost)}</div><div class="s">${f}★ → ${t}★ (max ${C.sfMaxStars(lv)}★) · all-Mode-1: ${big(base.cost)}</div></div>
-        <div class="kpi"><div class="k">Median / 90% luck</div><div class="v" style="font-size:20px">${big(m.p50)} / ${big(m.p90)}</div><div class="s">2,000 simulations</div></div>
+        <div class="kpi main"><div class="k">Expected cost</div><div class="v">${meso(e.cost)}</div><div class="s">${f}★ → ${t}★ (max ${C.sfMaxStars(lv)}★) · all-Mode-1: ${meso(base.cost)}</div></div>
+        <div class="kpi"><div class="k">Median / 90% luck</div><div class="v" style="font-size:20px">${meso(m.p50)} / ${meso(m.p90)}</div><div class="s">2,000 simulations</div></div>
         <div class="kpi"><div class="k">Expected booms</div><div class="v">${e.booms.toFixed(2)}</div><div class="s">${e.attempts.toFixed(1)} taps</div></div></div>`);
       for (const k of D.SF.modeStars) {
         const a = C.sfAttempt(lv, k, o);
-        out('sfPlanRow' + k, `${big(a.cost)} · ${pct(a.b, 2)}`);
+        out('sfPlanRow' + k, `${meso(a.cost)} · ${pct(a.b, 2)}`);
       }
       const rows = [];
       for (let k = f; k < t; k++) {
         const a = C.sfAttempt(lv, k, o);
         const step = C.sfExpected(lv, k, k + 1, o, rep);
-        rows.push(`<tr><td>${k}★ → ${k + 1}★</td><td class="l">${esc(D.SF_OPTIONS[a.choice])}</td><td>${big(a.cost)}</td><td>${pct(a.p, 2)}</td><td>${pct(1 - a.p - a.b, 2)}</td><td>${pct(a.b, 2)}</td>
-          <td>${a.b > 0 ? C.sfDest(k, o) + '★' : '—'}</td><td>${big(step.cost)}</td><td>${step.booms.toFixed(2)}</td></tr>`);
+        rows.push(`<tr><td>${k}★ → ${k + 1}★</td><td class="l">${esc(D.SF_OPTIONS[a.choice])}</td><td>${meso(a.cost)}</td><td>${pct(a.p, 2)}</td><td>${pct(1 - a.p - a.b, 2)}</td><td>${pct(a.b, 2)}</td>
+          <td>${a.b > 0 ? C.sfDest(k, o) + '★' : '—'}</td><td>${meso(step.cost)}</td><td>${step.booms.toFixed(2)}</td></tr>`);
       }
       out('sfTable', `<table><thead><tr><th>Step</th><th class="l">Strategy</th><th>Per tap</th><th>Success</th><th>Fail (keep ★)</th><th>Boom</th><th>Boom → </th><th>Expected (incl. booms)</th><th>Booms</th></tr></thead><tbody>${rows.join('')}</tbody></table>
         <p class="hint">A step's "expected" cost includes climbing back after a boom, so the steps don't add up to the total.</p>`);
@@ -816,6 +848,17 @@ DPS     = HEXA score × ring × force × level × class × calibration × k</div
     const key = el.dataset.k;
     if (!key) return;
     const t = el.dataset.t;
+    if (t === 'meso') {
+      const m = parseMeso(el.value);
+      el.classList.toggle('bad', m == null && el.value.trim() !== '');
+      if (m == null) return;
+      const [mo, mp] = resolve(key);
+      setPath(mo, mp, m);
+      if (e.type === 'change') el.value = mesoText(m);
+      if (mo === state) persist();
+      refresh();
+      return;
+    }
     let v = t === 'bool' ? (el.tagName === 'SELECT' ? el.value === 'true' : el.checked) : t === 'num' ? (el.value === '' ? 0 : Number(el.value)) : el.value;
     if (t === 'num' && !isFinite(v)) return;
     const [o, p] = resolve(key);
@@ -901,7 +944,7 @@ DPS     = HEXA score × ring × force × level × class × calibration × k</div
       const r = C.sfOptimizePlan(lv, f, t, C.sfOptsFrom(state.settings), Number(ui.sf.replace) || 0);
       state.settings.sfPlan = r.plan;
       persist(); renderTab();
-      out('sfAutoInfo', `Saved ${big(Math.max(0, before - C.sfExpected(lv, f, t, C.sfOptsFrom(state.settings), Number(ui.sf.replace) || 0).cost))} expected`);
+      out('sfAutoInfo', `Saved ${meso(Math.max(0, before - C.sfExpected(lv, f, t, C.sfOptsFrom(state.settings), Number(ui.sf.replace) || 0).cost))} expected`);
     },
     sfPlanReset() { D.SF.modeStars.forEach((k) => { state.settings.sfPlan[k] = '1'; }); persist(); renderTab(); },
     bossReset() { state.bossOverrides = {}; persist(); renderTab(); },
